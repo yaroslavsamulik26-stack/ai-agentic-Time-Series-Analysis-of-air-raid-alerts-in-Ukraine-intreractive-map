@@ -1,0 +1,423 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          30.565,
+          50.395
+        ]
+      },
+      "properties": {
+        "id": "energy_tec5",
+        "name": "ТЕЦ-5 (Видубичі)",
+        "category": "energy",
+        "district": "Голосіївський",
+        "vuln_yellow": 38,
+        "vuln_red": 39,
+        "description": "Найпотужніша теплоелектроцентраль Києва. Ключовий вузол енергопостачання правого берега."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          30.6653,
+          50.5312
+        ]
+      },
+      "properties": {
+        "id": "energy_tec6",
+        "name": "ТЕЦ-6 (Троєщина)",
+        "category": "energy",
+        "district": "Деснянський",
+        "vuln_yellow": 39,
+        "vuln_red": 38,
+        "description": "Критична ТЕЦ лівого берега, що забезпечує теплом та світлом північно-східні райони столиці."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          30.6394,
+          50.4431
+        ]
+      },
+      "properties": {
+        "id": "energy_darnytska_tec",
+        "name": "Дарницька ТЕЦ",
+        "category": "energy",
+        "district": "Дніпровський",
+        "vuln_yellow": 35,
+        "vuln_red": 32,
+        "description": "Історична ТЕЦ, що обслуговує значну частину промислових та житлових масивів лівобережжя."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          30.505,
+          50.588
+        ]
+      },
+      "properties": {
+        "id": "energy_kyiv_hes",
+        "name": "Київська ГЕС / ГАЕС",
+        "category": "energy",
+        "district": "Оболонський",
+        "vuln_yellow": 32,
+        "vuln_red": 40,
+        "description": "Стратегічний гідровузол каскаду Дніпра на північному підступі до столиці."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          30.451,
+          50.552
+        ]
+      },
+      "properties": {
+        "id": "energy_substation_north",
+        "name": "ПС 330 кВ «Північна»",
+        "category": "energy",
+        "district": "Подільський",
+        "vuln_yellow": 37,
+        "vuln_red": 34,
+        "description": "Опорна високовольтна підстанція 330 кВ магістральної мережі НЕК Укренерго."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          30.412,
+          50.362
+        ]
+      },
+      "properties": {
+        "id": "energy_substation_novokyiv",
+        "name": "ПС 330 кВ «Новокиївська»",
+        "category": "energy",
+        "district": "Голосіївський",
+        "vuln_yellow": 36,
+        "vuln_red": 35,
+        "description": "Вузлова підстанція південного енергокільця Києва."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          30.495,
+          50.502
+        ]
+      },
+      "properties": {
+        "id": "energy_substation_obolon",
+        "name": "ПС 110 кВ «Оболонь»",
+        "category": "energy",
+        "district": "Оболонський",
+        "vuln_yellow": 30,
+        "vuln_red": 25,
+        "description": "Розподільча підстанція, що живить Оболонський та Мінський масиви."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          30.5375,
+          50.4912
+        ]
+      },
+      "properties": {
+        "id": "trans_north_bridge",
+        "name": "Північний міст",
+        "category": "transport",
+        "district": "Оболонський",
+        "vuln_yellow": 15,
+        "vuln_red": 36,
+        "description": "Вантовий міст через Дніпро, головна транспортна артерія між Оболонню та Троєщиною."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          30.59,
+          50.3955
+        ]
+      },
+      "properties": {
+        "id": "trans_south_bridge",
+        "name": "Південний міст",
+        "category": "transport",
+        "district": "Дарницький",
+        "vuln_yellow": 18,
+        "vuln_red": 37,
+        "description": "Стратегічний автомобільно-метрополітенівський міст через Дніпро."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          30.584,
+          50.4285
+        ]
+      },
+      "properties": {
+        "id": "trans_paton_bridge",
+        "name": "Міст Патона",
+        "category": "transport",
+        "district": "Печерський",
+        "vuln_yellow": 14,
+        "vuln_red": 34,
+        "description": "Суцільнозварний міст, ключова сполучна ланка центральної частини міста."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          30.588,
+          50.416
+        ]
+      },
+      "properties": {
+        "id": "trans_darnytskyi_bridge",
+        "name": "Дарницький міст (Залізнично-автомобільний)",
+        "category": "transport",
+        "district": "Дніпровський",
+        "vuln_yellow": 16,
+        "vuln_red": 38,
+        "description": "Головний залізничний міст для пасажирського та логістичного сполучення столиці."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          30.565,
+          50.443
+        ]
+      },
+      "properties": {
+        "id": "trans_metro_bridge",
+        "name": "Міст Метро",
+        "category": "transport",
+        "district": "Печерський",
+        "vuln_yellow": 12,
+        "vuln_red": 33,
+        "description": "Двоярусний міст червоної лінії метрополітену через Дніпро."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          30.489,
+          50.4404
+        ]
+      },
+      "properties": {
+        "id": "trans_central_station",
+        "name": "Центральний залізничний вокзал",
+        "category": "transport",
+        "district": "Солом'янський",
+        "vuln_yellow": 24,
+        "vuln_red": 35,
+        "description": "Головний транспортно-пасажирський хаб країни."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          30.4497,
+          50.4019
+        ]
+      },
+      "properties": {
+        "id": "trans_zhuliany_airport",
+        "name": "Аеропорт «Київ» (Жуляни)",
+        "category": "transport",
+        "district": "Солом'янський",
+        "vuln_yellow": 28,
+        "vuln_red": 32,
+        "description": "Авіаційний комплекс, злітно-посадкова смуга та технічні ангари."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          30.535,
+          50.4475
+        ]
+      },
+      "properties": {
+        "id": "admin_gov_quarter",
+        "name": "Урядовий квартал (Кабмін, ВРУ, ОПУ)",
+        "category": "admin",
+        "district": "Печерський",
+        "vuln_yellow": 15,
+        "vuln_red": 40,
+        "description": "Епіцентр державного управління та прийняття військово-політичних рішень."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          30.5208,
+          50.4468
+        ]
+      },
+      "properties": {
+        "id": "admin_kmda",
+        "name": "Київська міська державна адміністрація (КМДА)",
+        "category": "admin",
+        "district": "Шевченківський",
+        "vuln_yellow": 14,
+        "vuln_red": 32,
+        "description": "Центр муніципального управління та цивільного захисту Києва."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          30.478,
+          50.435
+        ]
+      },
+      "properties": {
+        "id": "admin_mod_hq",
+        "name": "Комплекс Міністерства оборони / Генштабу",
+        "category": "admin",
+        "district": "Солом'янський",
+        "vuln_yellow": 20,
+        "vuln_red": 39,
+        "description": "Орган стратегічного управління сектором оборони."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          30.483,
+          50.4615
+        ]
+      },
+      "properties": {
+        "id": "ind_artem_plant",
+        "name": "ДАХК «Артем»",
+        "category": "industry",
+        "district": "Шевченківський",
+        "vuln_yellow": 22,
+        "vuln_red": 39,
+        "description": "Виробництво спеціальної техніки, авіаційних керованих ракет та компонентів захисту."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          30.42,
+          50.4485
+        ]
+      },
+      "properties": {
+        "id": "ind_luch_plant",
+        "name": "ДП ДержККБ «Луч»",
+        "category": "industry",
+        "district": "Шевченківський",
+        "vuln_yellow": 20,
+        "vuln_red": 38,
+        "description": "Провідний розробник ракетного озброєння (Нептун, Стугна-П, Вільха)."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          30.395,
+          50.457
+        ]
+      },
+      "properties": {
+        "id": "ind_antonov_complex",
+        "name": "ДП «Антонов» (Авіакомплекс)",
+        "category": "industry",
+        "district": "Святошинський",
+        "vuln_yellow": 24,
+        "vuln_red": 36,
+        "description": "Авіабудівне підприємство, виробничі потужності та льотно-випробувальна база."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          30.485,
+          50.49
+        ]
+      },
+      "properties": {
+        "id": "ind_mayak_plant",
+        "name": "Завод «Маяк»",
+        "category": "industry",
+        "district": "Оболонський",
+        "vuln_yellow": 25,
+        "vuln_red": 31,
+        "description": "Виробництво стрілецької зброї та спеціального артилерійського обладнання."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          30.555,
+          50.37
+        ]
+      },
+      "properties": {
+        "id": "ind_korchuvate_depot",
+        "name": "Паливно-логістичний термінал Корчувате",
+        "category": "industry",
+        "district": "Голосіївський",
+        "vuln_yellow": 36,
+        "vuln_red": 30,
+        "description": "Склад паливно-мастильних матеріалів та нафтопродуктів південної промзони."
+      }
+    }
+  ]
+}
