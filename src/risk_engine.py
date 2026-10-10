@@ -200,30 +200,43 @@ class KyivRiskEngine:
                 data["avg_yellow_score"] = 45.0
                 data["avg_red_score"] = 45.0
 
-            # Overall exposure index (0-100)
-            exposure_index = round(
-                (data["incidents_count"] * 3.5)
-                + (data["avg_yellow_score"] * 0.3)
-                + (data["avg_red_score"] * 0.3),
-                1,
-            )
-            data["exposure_index"] = min(100.0, exposure_index)
-            # Safety score (100 - exposure)
-            data["safety_score"] = round(max(5.0, 100.0 - data["exposure_index"]), 1)
+            # Non-linear high-contrast district exposure formula
+            # Base wartime threat floor: 22 pts
+            # Incident exposure: up to 45 pts (scales strongly with confirmed hits/debris)
+            # Facility vulnerability exposure: up to 25 pts
+            inc_pts = min(45.0, data["incidents_count"] * 11.5)
+            facility_pts = ((data["avg_yellow_score"] + data["avg_red_score"]) / 2.0) * 0.28
+            
+            # Corridor bonuses:
+            corridor_bonus = 0.0
+            if d in ["Оболонський", "Дарницький", "Деснянський"]:
+                corridor_bonus += 8.0  # Primary drone ingress corridors
+            if d in ["Шевченківський", "Солом'янський", "Печерський"]:
+                corridor_bonus += 10.0 # High-density ballistic/missile target clusters
 
-            if data["exposure_index"] >= 70:
-                data["status"] = "Зона підвищеного ризику (часті уламки/удари)"
+            exposure_index = round(min(96.0, 22.0 + inc_pts + facility_pts + corridor_bonus), 1)
+            data["exposure_index"] = exposure_index
+
+            # Safety score (100 - exposure) reflects residual safety margin
+            data["safety_score"] = round(max(4.0, 100.0 - exposure_index), 1)
+
+            # Strict realistic defense tiers
+            if exposure_index >= 80:
+                data["status"] = "КРИТИЧНА ЗАГРОЗА (висока концентрація ударів/уламків)"
                 data["badge_color"] = "#dc2626"
-            elif data["exposure_index"] >= 50:
-                data["status"] = "Помірний ризик"
-                data["badge_color"] = "#f59e0b"
+            elif exposure_index >= 65:
+                data["status"] = "ВИСОКИЙ РИЗИК (траєкторії атак, ураження інфраструктури)"
+                data["badge_color"] = "#ea580c"
+            elif exposure_index >= 50:
+                data["status"] = "ПІДВИЩЕНИЙ РИЗИК (загроза перехоплень ППО)"
+                data["badge_color"] = "#eab308"
             else:
-                data["status"] = "Відносно безпечніший сектор"
+                data["status"] = "ВІДНОСНО ПОМІРНИЙ РИЗИК (менша щільність цілей)"
                 data["badge_color"] = "#10b981"
 
             results.append(data)
 
-        # Sort districts by safety score descending (safest first)
+        # Sort districts by exposure descending (most exposed first)
         results = sorted(results, key=lambda x: x["exposure_index"], reverse=True)
         for rank, item in enumerate(results, start=1):
             item["threat_rank"] = rank
