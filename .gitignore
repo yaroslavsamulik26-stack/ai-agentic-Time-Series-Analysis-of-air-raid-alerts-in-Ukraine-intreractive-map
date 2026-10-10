@@ -1,0 +1,26 @@
+# Python cache & virtual environment
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+
+# OS artifacts (macOS)
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+
+# Intermediate and raw user dumps
+data/raw/telegram/*
+!data/raw/telegram/.gitkeep
+data/raw/osint/*
+!data/raw/osint/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+
+# IDE configs
+.idea/
+.vscode/
+*.swp
