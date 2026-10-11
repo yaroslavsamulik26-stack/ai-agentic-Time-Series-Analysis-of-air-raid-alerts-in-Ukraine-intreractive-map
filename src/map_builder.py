@@ -870,7 +870,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     <div class="metric-label">Верифікованих подій</div>
                 </div>
                 <div class="metric-card">
-                    <div class="metric-val" style="color:#eab308;" id="modal-nblm-shahed">745</div>
+                    <div class="metric-val" style="color:#eab308;" id="modal-nblm-shahed">746</div>
                     <div class="metric-label">Ударних БпЛА (Shahed)</div>
                 </div>
                 <div class="metric-card">
@@ -944,19 +944,19 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
             <div class="metrics-grid">
                 <div class="metric-card">
-                    <div class="metric-val" id="metric-roc-auc">0.681</div>
+                    <div class="metric-val" id="metric-roc-auc">0.651</div>
                     <div class="metric-label">Model ROC-AUC (Holdout)</div>
                 </div>
                 <div class="metric-card">
-                    <div class="metric-val" id="metric-baseline-auc">0.647</div>
+                    <div class="metric-val" id="metric-baseline-auc">0.658</div>
                     <div class="metric-label">Baseline Prior AUC</div>
                 </div>
                 <div class="metric-card">
-                    <div class="metric-val" id="metric-brier">0.217</div>
+                    <div class="metric-val" id="metric-brier">0.235</div>
                     <div class="metric-label">Brier Score</div>
                 </div>
                 <div class="metric-card">
-                    <div class="metric-val" id="metric-alerts-cnt">99</div>
+                    <div class="metric-val" id="metric-alerts-cnt">169</div>
                     <div class="metric-label">Тривог проаналізовано</div>
                 </div>
             </div>
@@ -966,7 +966,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     <i class="fa-solid fa-shield-virus"></i> Методологія запобігання Data Leakage
                 </h3>
                 <p style="font-size:12px; line-height:1.45; color:#cbd5e1;">
-                    Train split: дані до <b>1 вересня</b>. Test split: <b>1 вересня — 11 жовтня</b>.<br>
+                    Навчальна вибірка (Train): дані до <b>1 вересня</b>. Тестова вибірка (Test): <b>1 вересня — 11 жовтня</b>.<br>
                     Усі ознаки моделі на момент $T$ обчислюються суворо з подій минулого. Жодного витоку майбутніх подій.
                 </p>
             </div>
@@ -1182,6 +1182,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             }
         }
 
+        const districtLayerMap = {};
+
         // 1. Render All 10 Kyiv Districts Polygons (Dynamically reacting to active threat mode)
         function renderDistrictsPolygons() {
             districtsLayerGroup.clearLayers();
@@ -1211,6 +1213,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 },
                 onEachFeature: function(feature, layer) {
                     const dName = feature.properties.district;
+                    districtLayerMap[dName] = layer;
                     const stats = districtStatsMap[dName] || {};
                     const exposure = (stats.exposure_by_mode && stats.exposure_by_mode[modeKey] !== undefined)
                         ? stats.exposure_by_mode[modeKey]
@@ -1272,6 +1275,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             objectsLayerGroup.clearLayers();
 
             RISK_DATA.objects.forEach(obj => {
+                obj._marker = null;
                 if (!activeCategories.has(obj.category)) return;
 
                 const isDefense = obj.category === 'defense';
@@ -1312,6 +1316,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 });
 
                 const marker = L.marker([obj.lat, obj.lon], { icon: customIcon });
+                obj._marker = marker;
 
                 const scoreLabel = isDefense ? 'Індекс активності ППО:' : 'Індекс небезпеки:';
                 const statusLabel = isDefense ?
@@ -1351,12 +1356,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             switch(type) {
                 case 'drone_shahed':
                 case 'drone_jet':
-                    return 'Ударний БпЛА (Shahed)';
                 case 'drone_decoy':
-                    return 'Дрон-приманка';
+                    return 'Ударний БпЛА (Shahed)';
                 case 'missile_ballistic':
+                case 'mig31_kinzhal':
                     return 'Балістична ракета';
                 case 'missile_cruise':
+                case 'missile_strategic':
                     return 'Крилата ракета';
                 default:
                     return 'Ударний БпЛА (Shahed)';
@@ -1402,6 +1408,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 hint = hint.substring(district.length + 1).trim();
             } else if (hint.startsWith(district + ' -')) {
                 hint = hint.substring(district.length + 2).trim();
+            } else if (district === 'Оболонський' && (hint.startsWith('Оболонь,') || hint.startsWith('Оболонь -'))) {
+                hint = hint.replace(/^Оболонь[\\s,-]+/, '').trim();
             } else if (hint === 'Сектор ' + district || hint === district) {
                 hint = '';
             }
@@ -1418,6 +1426,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             let count = 0;
 
             INCIDENTS_DATA.forEach(inc => {
+                inc._marker = null;
                 if (currentThreatMode === 'yellow' && inc.alert_level !== 'yellow') return;
                 if (currentThreatMode === 'red' && inc.alert_level !== 'red') return;
 
@@ -1443,6 +1452,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 const consequenceText = inc.description || impactUA;
 
                 const marker = L.marker([inc.lat, inc.lon], { icon: incidentIcon });
+                inc._marker = marker;
                 const popup = `
                     <div class="popup-title" style="margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; gap:8px;">
                         <span><i class="fa-solid fa-triangle-exclamation" style="color:${incColor}"></i> ${inc.district}</span>
@@ -1538,7 +1548,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
                 const card = document.createElement('div');
                 card.className = 'stat-card';
-                card.onclick = () => map.flyTo([d.center_lat, d.center_lon], 13);
+                card.onclick = () => {
+                    map.flyTo([d.center_lat, d.center_lon], 13);
+                    if (districtLayerMap[d.district]) districtLayerMap[d.district].openPopup();
+                };
                 card.innerHTML = `
                     <div class="district-info">
                         <h4>#${rank} ${d.district}</h4>
@@ -1563,7 +1576,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 const color = isDefense ? '#10b981' : getScoreColor(score);
                 const card = document.createElement('div');
                 card.className = 'stat-card';
-                card.onclick = () => map.flyTo([obj.lat, obj.lon], 15);
+                card.onclick = () => {
+                    map.flyTo([obj.lat, obj.lon], 15);
+                    if (obj._marker) obj._marker.openPopup();
+                };
                 card.innerHTML = `
                     <div class="district-info">
                         <h4>${obj.name}</h4>
@@ -1607,7 +1623,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
                 const card = document.createElement('div');
                 card.className = 'stat-card';
-                card.onclick = () => map.flyTo([inc.lat, inc.lon], 15);
+                card.onclick = () => {
+                    map.flyTo([inc.lat, inc.lon], 15);
+                    if (inc._marker) inc._marker.openPopup();
+                };
                 card.innerHTML = `
                     <div class="district-info">
                         <h4>${inc.district}</h4>

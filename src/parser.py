@@ -395,8 +395,11 @@ class KyivDataIngestionPipeline:
             tg_df = pd.DataFrame(tg_events)
             incidents_df = pd.concat([incidents_df, tg_df], ignore_index=True)
 
-        # Unify all shahed variants & alert levels
-        incidents_df["threat_type"] = incidents_df["threat_type"].replace({"drone_jet": "drone_shahed"})
+        # Unify all shahed variants & alert levels (R2: single tactical type «Ударні БпЛА (Shahed)»)
+        incidents_df["threat_type"] = incidents_df["threat_type"].replace({
+            "drone_jet": "drone_shahed",
+            "drone_decoy": "drone_shahed",
+        })
         incidents_df["alert_level"] = incidents_df["alert_level"].replace({"orange": "yellow"})
 
         # Deduplicate by approximate time (minute level) and district
@@ -424,7 +427,7 @@ class KyivDataIngestionPipeline:
         threat_labels_map = {
             "drone_shahed": "Ударні БпЛА (Shahed)",
             "drone_jet": "Ударні БпЛА (Shahed)",
-            "drone_decoy": "Дрони-приманки",
+            "drone_decoy": "Ударні БпЛА (Shahed)",
             "missile_ballistic": "Балістичні ракети",
             "missile_cruise": "Крилаті ракети",
         }

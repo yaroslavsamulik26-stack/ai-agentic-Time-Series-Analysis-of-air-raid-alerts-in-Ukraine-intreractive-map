@@ -21,6 +21,7 @@ class TestKyivDefensePipeline(unittest.TestCase):
     def setUpClass(cls):
         cls.project_root = PROJECT_ROOT
         cls.incidents_path = cls.project_root / "data" / "processed" / "incidents_unified.csv"
+        cls.alerts_path = cls.project_root / "data" / "processed" / "alerts_unified.csv"
         cls.infra_path = cls.project_root / "data" / "curated" / "kyiv_infrastructure.geojson"
         cls.districts_path = cls.project_root / "data" / "curated" / "kyiv_districts.geojson"
         cls.index_path = cls.project_root / "index.html"
@@ -118,9 +119,10 @@ class TestKyivDefensePipeline(unittest.TestCase):
         self.assertIn("yellow", alert_levels)
         self.assertIn("red", alert_levels)
 
-        # Unified Shahed verification: no standalone drone_jet
+        # Unified Shahed verification: all drone variants unified into drone_shahed
         threat_types = set(df["threat_type"].unique())
         self.assertNotIn("drone_jet", threat_types, "drone_jet must be unified into drone_shahed")
+        self.assertNotIn("drone_decoy", threat_types, "drone_decoy must be unified into drone_shahed")
         self.assertIn("drone_shahed", threat_types)
 
         # 6-month period check: April 11 to October 11, 2026
@@ -132,6 +134,25 @@ class TestKyivDefensePipeline(unittest.TestCase):
         # Verified significant missile presence
         red_count = (df["alert_level"] == "red").sum()
         self.assertGreaterEqual(red_count, 50, f"Expected at least 50 missile/ballistic strikes, got {red_count}")
+
+    def test_processed_alerts_dataset(self):
+        """Verify processed alerts unified CSV schema, 6-month period, and non-emptiness (R1)."""
+        self.assertTrue(self.alerts_path.exists(), "alerts_unified.csv does not exist")
+        df = pd.read_csv(self.alerts_path)
+        self.assertGreaterEqual(len(df), 150, "Dataset should have at least 150 alert records")
+
+        required_cols = {"alert_id", "started_at", "finished_at", "duration_minutes", "threat_type", "alert_level", "region"}
+        for col in required_cols:
+            self.assertIn(col, df.columns)
+
+        min_date = df["started_at"].min()
+        max_date = df["finished_at"].max()
+        self.assertTrue(min_date.startswith("2026-04-11"), f"Expected start date 2026-04-11, got {min_date}")
+        self.assertTrue(max_date.startswith("2026-10-11"), f"Expected end date 2026-10-11, got {max_date}")
+
+        alert_levels = set(df["alert_level"].unique())
+        self.assertIn("yellow", alert_levels)
+        self.assertIn("red", alert_levels)
 
     # --- 2. Risk Engine & Infrastructure Tests ---
     def test_infrastructure_curated_data(self):
@@ -276,6 +297,7 @@ class TestKyivDefensePipeline(unittest.TestCase):
         forbidden_ui_patterns = [
             "<b>drone_shahed</b>",
             "<b>drone_jet</b>",
+            "<b>drone_decoy</b>",
             "<b>missile_ballistic</b>",
             "<b>missile_cruise</b>",
             "<b>debris_fall</b>",
@@ -284,6 +306,17 @@ class TestKyivDefensePipeline(unittest.TestCase):
         ]
         for pattern in forbidden_ui_patterns:
             self.assertNotIn(pattern, content)
+
+        # Localized methodology terms and 6-month holdout metrics in modal
+        self.assertIn("Навчальна вибірка (Train)", content)
+        self.assertIn("Тестова вибірка (Test)", content)
+        self.assertIn('id="metric-alerts-cnt">169<', content)
+        self.assertIn('id="metric-roc-auc">0.651<', content)
+        self.assertIn('id="modal-nblm-total">835<', content)
+        self.assertIn('id="modal-nblm-shahed">746<', content)
+        self.assertIn('id="modal-nblm-missiles">89<', content)
+        self.assertIn('id="modal-nblm-turrets">3 сектори<', content)
+        self.assertNotIn("Оболонський район, Оболонь,", content)
 
 
 if __name__ == "__main__":
