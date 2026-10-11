@@ -1,15 +1,26 @@
 """
 risk_engine.py
-Predictive Target Probability & Geospatial Risk Engine for Kyiv Defense Analytics.
+Deterministic Target Attractiveness & Strategic Threat Engine for Kyiv Defense Analytics.
 
-Implements Model 4: Two-layer Hybrid Predictive Model:
-  1. Time Series Hazard Engine H(t, m): Evaluated temporal hazard and diurnal onset frequency.
-  2. Target Strategic Prioritization:
-     P_Target(i, t, m) = H(t, m) * [alpha * CategoryWeight(k_i, m) + beta * Criticality(i) + gamma * CorridorProximity(i)] * (1 - AirDefense(i, m))
-  3. Air Defense Mitigation: Multi-layered air defense shielding (Patriot dome, automated turret sectors).
+Implements Two-layer Defense Architecture:
+  1. Time Series Hazard Engine («КОЛИ»): Evaluates temporal window of threat to the capital
+     (daily attack peaks, missile/drone inventory replenishment phases, cyclicality) without data leakage.
+  2. Target Attractiveness Engine («КУДИ»): Computes deterministic Target Attractiveness Index
+     A_i in [0, 100] for critical infrastructure facilities during an attack:
+     A_i = (w_crit * C_i + w_doctr * D_i + w_corr * E_i) * (1 - lambda * S_i)
+     where:
+       - C_i in [0, 100]: Strategic criticality for city life support (energy 90-100, bridges 85, water 80, metro 70, civilian hubs 30)
+       - D_i in [0, 100]: Doctrinal priority by threat mode (Shahed vs Missiles)
+       - E_i in [0, 100]: Exposure to inbound threat corridors and river channels
+       - S_i in [0, 1]: Echeloned air defense shielding (Patriot, NASAMS, mobile fire groups)
+       - Tactical statuses:
+         * 80-100: «Критична ціль» (#dc2626)
+         * 65-79:  «Високий пріоритет» (#ea580c)
+         * 50-64:  «Підвищена увага» (#eab308)
+         * <50:    «Помірний ризик» (#16a34a)
 
-Ranks intact critical infrastructure facilities by predicted strike probability P_Target
-and aligns administrative district exposure with target density, criticality, and defense shielding.
+  3. District Danger Aggregation:
+     DistrictDanger(D) = Norm(0.40 * max_{i in D}(A_i) + 0.40 * avg_{i in D}(A_i) + 0.20 * CorridorPenalty(D))
 """
 
 import json
@@ -26,8 +37,34 @@ except ImportError:
         KyivAlertTimeSeriesAnalyzer = None
 
 
+def get_target_tactical_status(score: float) -> tuple[str, str]:
+    """Returns Ukrainian tactical status and badge hex color for target attractiveness index."""
+    try:
+        val = float(score)
+        if not math.isfinite(val):
+            val = 0.0
+    except (TypeError, ValueError):
+        val = 0.0
+
+    if val >= 80.0:
+        return "Критична ціль", "#dc2626"
+    elif val >= 65.0:
+        return "Високий пріоритет", "#ea580c"
+    elif val >= 50.0:
+        return "Підвищена увага", "#eab308"
+    else:
+        return "Помірний ризик", "#16a34a"
+
+
 def haversine_distance_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Computes great-circle distance between two points in km."""
+    try:
+        lat1, lon1, lat2, lon2 = float(lat1), float(lon1), float(lat2), float(lon2)
+        if not (math.isfinite(lat1) and math.isfinite(lon1) and math.isfinite(lat2) and math.isfinite(lon2)):
+            return 9999.0
+    except (TypeError, ValueError):
+        return 9999.0
+
     r = 6371.0
     phi1, phi2 = math.radians(lat1), math.radians(lat2)
     dphi = math.radians(lat2 - lat1)
@@ -43,8 +80,18 @@ def point_to_segment_distance_km(lat: float, lon: float, p1: list | tuple, p2: l
     Computes minimum Euclidean distance in local metric projection
     from point (lat, lon) to segment [p1, p2], where p1, p2 are [lat, lon].
     """
-    lat1, lon1 = p1[0], p1[1]
-    lat2, lon2 = p2[0], p2[1]
+    try:
+        lat, lon = float(lat), float(lon)
+        if not (math.isfinite(lat) and math.isfinite(lon)):
+            return 9999.0
+        if not (isinstance(p1, (list, tuple)) and isinstance(p2, (list, tuple)) and len(p1) >= 2 and len(p2) >= 2):
+            return 9999.0
+        lat1, lon1 = float(p1[0]), float(p1[1])
+        lat2, lon2 = float(p2[0]), float(p2[1])
+        if not (math.isfinite(lat1) and math.isfinite(lon1) and math.isfinite(lat2) and math.isfinite(lon2)):
+            return 9999.0
+    except (TypeError, ValueError, IndexError):
+        return 9999.0
 
     mean_lat = math.radians((lat1 + lat2) / 2.0)
     kx = 111.32 * math.cos(mean_lat)
@@ -190,6 +237,14 @@ class KyivRiskEngine:
         Backwards-compatible spatial kernel proximity calculation (0 to 30 points).
         Used for historical strike density analysis.
         """
+        try:
+            lat = float(lat)
+            lon = float(lon)
+            if not (math.isfinite(lat) and math.isfinite(lon)):
+                return 0.0
+        except (TypeError, ValueError):
+            return 0.0
+
         df = self.incidents_df
         if df.empty:
             return 0.0
@@ -218,6 +273,14 @@ class KyivRiskEngine:
         Calculates corridor proximity score [0, 100] to verified inbound attack vectors.
         Uses exponential spatial kernel: 100 * exp(-d_min^2 / (2 * sigma^2)) with sigma = 3.5 km.
         """
+        try:
+            lat = float(lat)
+            lon = float(lon)
+            if not (math.isfinite(lat) and math.isfinite(lon)):
+                return 10.0
+        except (TypeError, ValueError):
+            return 10.0
+
         min_dist = float("inf")
         applicable_modes = {mode, "all"}
         if mode == "orange":
@@ -246,6 +309,14 @@ class KyivRiskEngine:
         Calculates active air defense shielding coefficient AirDefense(i, m) in [0.20, 0.82].
         Mitigation factor applied to hit probability is (1 - AirDefense).
         """
+        try:
+            lat = float(lat)
+            lon = float(lon)
+            if not (math.isfinite(lat) and math.isfinite(lon)):
+                return 0.30
+        except (TypeError, ValueError):
+            return 0.30
+
         is_drone_mode = mode in ["yellow", "orange"]
         is_missile_mode = mode == "red"
 
@@ -281,29 +352,35 @@ class KyivRiskEngine:
         self, props: dict, lat: float, lon: float, mode: str = "all", horizon: str = "7d"
     ) -> dict:
         """
-        Computes P_Target(i, t, m) for an intact critical infrastructure facility:
-          P_Target(i, t, m) = H(t, m) * [alpha * CategoryWeight + beta * Criticality + gamma * CorridorProximity] * (1 - AirDefense)
+        Computes deterministic Target Attractiveness Index A_i in [0, 100] for a critical facility:
+          A_i = (w_crit * C_i + w_doctr * D_i + w_corr * E_i) * (1 - lambda * S_i)
+        where:
+          - C_i in [0, 100]: Strategic criticality for city life support
+          - D_i in [0, 100]: Doctrinal priority by threat mode (Shahed vs Missiles)
+          - E_i in [0, 100]: Exposure to inbound attack vectors / river channels
+          - S_i in [0, 1]: Echeloned air defense shielding
 
-        Returns dictionary with P_Target (0-100%), qualitative tier, and factor breakdown.
+        Returns dictionary with attractiveness score, tactical status, and factor breakdown.
         """
+        if not isinstance(props, dict):
+            props = {}
+
         cat = props.get("category", "")
 
-        # 1. Category Strategic Weight [0, 100] based on empirical 6-month strike targeting analysis
-        category_weights = {
-            "energy": {"yellow": 96.0, "orange": 96.0, "red": 92.0, "all": 94.5},
-            "bridges": {"yellow": 55.0, "orange": 55.0, "red": 85.0, "all": 75.0},
-            "metro": {"yellow": 70.0, "orange": 70.0, "red": 80.0, "all": 75.0},
-            "fuel": {"yellow": 92.0, "orange": 92.0, "red": 88.0, "all": 90.0},
-            "water": {"yellow": 80.0, "orange": 80.0, "red": 85.0, "all": 82.0},
-            "civilian_hub": {"yellow": 65.0, "orange": 65.0, "red": 60.0, "all": 62.0},
-            "industry": {"yellow": 72.0, "orange": 72.0, "red": 96.0, "all": 84.0},
-            "admin": {"yellow": 48.0, "orange": 48.0, "red": 95.0, "all": 75.0},
-            "transport": {"yellow": 68.0, "orange": 68.0, "red": 82.0, "all": 75.0},
-            "defense": {"yellow": 55.0, "orange": 55.0, "red": 88.0, "all": 70.0},
+        # 1. Facility Strategic Criticality C_i [0, 100]
+        cat_crit_base = {
+            "energy": 95.0,
+            "bridges": 85.0,
+            "fuel": 85.0,
+            "water": 80.0,
+            "metro": 70.0,
+            "industry": 80.0,
+            "admin": 70.0,
+            "transport": 70.0,
+            "defense": 75.0,
+            "civilian_hub": 30.0,
         }
-        cw = category_weights.get(cat, {"yellow": 50.0, "orange": 50.0, "red": 50.0, "all": 50.0}).get(mode, 60.0)
-
-        # 2. Facility Criticality [0, 100]
+        crit = cat_crit_base.get(cat, 60.0)
         try:
             v_yellow = float(props.get("vuln_yellow", 20) or 20)
         except (ValueError, TypeError):
@@ -313,50 +390,65 @@ class KyivRiskEngine:
         except (ValueError, TypeError):
             v_red = 20.0
 
-        if mode in ["yellow", "orange"]:
-            crit = (v_yellow / 40.0) * 100.0
-        elif mode == "red":
-            crit = (v_red / 40.0) * 100.0
-        else:
-            crit = (max(v_yellow, v_red) / 40.0) * 100.0
+        if cat == "energy":
+            v_val = max(v_yellow, v_red)
+            crit = min(100.0, max(90.0, 90.0 + 10.0 * (v_val / 40.0)))
+        elif cat == "bridges":
+            crit = 85.0
+        elif cat == "water":
+            crit = 80.0
+            if props.get("id") == "water_bortnytska_aeration" or "95.0" in str(props.get("criticality_index", "")):
+                crit = 95.0
+        elif cat == "metro":
+            crit = 70.0
+        elif cat == "civilian_hub":
+            crit = 30.0
 
-        # Strategic bridges: heightened vulnerability to blocking inter-bank communication under missile strikes (R1)
-        if cat == "bridges" and mode in ["red", "all"]:
-            crit = min(100.0, crit * 1.15)
+        if props.get("criticality_index"):
+            try:
+                crit = max(crit, float(props.get("criticality_index")))
+            except (ValueError, TypeError):
+                pass
+        crit = round(min(100.0, max(0.0, crit)), 1)
 
-        # Water utility: Bortnytska aeration station critical environmental rating R_i = 95.0 (R3)
-        if props.get("id") == "water_bortnytska_aeration" or "95.0" in str(props.get("criticality_index", "")):
-            crit = max(crit, 95.0)
+        # 2. Doctrinal Priority D_i [0, 100] by threat mode
+        category_weights = {
+            "energy": {"yellow": 96.0, "orange": 96.0, "red": 92.0, "all": 94.5},
+            "bridges": {"yellow": 55.0, "orange": 55.0, "red": 85.0, "all": 75.0},
+            "metro": {"yellow": 70.0, "orange": 70.0, "red": 80.0, "all": 75.0},
+            "fuel": {"yellow": 92.0, "orange": 92.0, "red": 88.0, "all": 90.0},
+            "water": {"yellow": 80.0, "orange": 80.0, "red": 85.0, "all": 82.0},
+            "civilian_hub": {"yellow": 45.0, "orange": 45.0, "red": 50.0, "all": 48.0},
+            "industry": {"yellow": 72.0, "orange": 72.0, "red": 96.0, "all": 84.0},
+            "admin": {"yellow": 48.0, "orange": 48.0, "red": 95.0, "all": 75.0},
+            "transport": {"yellow": 68.0, "orange": 68.0, "red": 82.0, "all": 75.0},
+            "defense": {"yellow": 55.0, "orange": 55.0, "red": 88.0, "all": 70.0},
+        }
+        doctr = category_weights.get(cat, {"yellow": 50.0, "orange": 50.0, "red": 50.0, "all": 50.0}).get(mode, 60.0)
+        doctr = round(min(100.0, max(0.0, doctr)), 1)
 
-        crit = min(100.0, max(20.0, crit))
-
-        # 3. Corridor Proximity [0, 100]
+        # 3. Corridor Exposure E_i [0, 100]
         corridor_prox = self.calculate_corridor_proximity(lat, lon, mode=mode)
 
-        # 4. Strategic Bracket (alpha=0.40, beta=0.35, gamma=0.25)
-        alpha, beta, gamma = 0.40, 0.35, 0.25
-        strategic_score = round(alpha * cw + beta * crit + gamma * corridor_prox, 1)
-
-        # 5. Air Defense Shielding
+        # 4. Air Defense Shielding S_i in [0, 1]
         air_defense = self.calculate_air_defense_shielding(lat, lon, mode=mode, category=cat)
-        mitigation_factor = 1.0 - air_defense
 
-        # 6. Time Hazard Factor H(t, m) derived from Time Series Engine
-        default_hazards = {
-            "24h": {"yellow": 0.68, "orange": 0.68, "red": 0.58, "all": 0.64},
-            "7d": {"yellow": 0.88, "orange": 0.88, "red": 0.80, "all": 0.85},
-            "30d": {"yellow": 0.98, "orange": 0.98, "red": 0.92, "all": 0.96},
-        }
-        active_hazards = self.dynamic_hazards if self.dynamic_hazards else default_hazards
-        h_val = active_hazards.get(horizon, default_hazards.get(horizon, default_hazards["7d"])).get(mode, 0.85)
+        # 5. Deterministic Formula for A_i:
+        # A_i = (w_crit * C_i + w_doctr * D_i + w_corr * E_i) * (1 - lambda * S_i)
+        w_crit = 0.45
+        w_doctr = 0.35
+        w_corr = 0.20
+        lambda_mitigation = 0.40
 
-        # 7. Calibrated P_Target (0 - 100%)
-        # Scaling constant kappa ensures top strategic intact facilities reach 75-85% under active hazard
-        kappa = 1.28
-        raw_prob = kappa * h_val * strategic_score * mitigation_factor
-        p_target = round(min(100.0, max(5.0, raw_prob)), 1)
+        base_attractiveness = w_crit * crit + w_doctr * doctr + w_corr * corridor_prox
+        mitigation_factor = 1.0 - lambda_mitigation * air_defense
+        raw_score = base_attractiveness * mitigation_factor
+        a_i = round(min(100.0, max(0.0, raw_score)), 1)
 
-        # Debris Risk P_DebrisRisk for Civilian Mega-Hubs & Open Transit Viaducts (R2, R3)
+        # Tactical status
+        status, status_color = get_target_tactical_status(a_i)
+
+        # Debris risk for large civilian hubs and open viaducts
         try:
             area = float(props.get("area_sqm") or 0)
         except (ValueError, TypeError):
@@ -368,38 +460,40 @@ class KyivRiskEngine:
             area_factor = 0.85 if is_viaduct else (min(1.0, max(0.65, area / 300000.0)) if area else 0.75)
             p_debris_risk = round(min(100.0, corridor_prox * 0.75 * area_factor + 25.0 * (1.0 - air_defense * 0.5)), 1)
 
-        # Precompute across tactical (24h), operational (7d), and strategic (30d) horizons
-        horizons_p = {}
-        for h_k in ["24h", "7d", "30d"]:
-            h_sub = active_hazards.get(h_k, default_hazards[h_k])
-            h_f = h_sub.get(mode, 0.85)
-            h_raw = kappa * h_f * strategic_score * mitigation_factor
-            horizons_p[h_k] = round(min(100.0, max(5.0, h_raw)), 1)
-
-        def get_tier(p: float) -> str:
-            if p >= 70.0:
-                return "Критичний"
-            if p >= 50.0:
-                return "Високий"
-            if p >= 30.0:
-                return "Середній"
-            return "Помірний"
+        # Precompute operational horizons ensuring strict monotonicity: 0 <= 24h <= 7d <= 30d <= 100
+        horizons_p = {
+            "24h": round(max(0.0, min(a_i, a_i * 0.85)), 1),
+            "7d": a_i,
+            "30d": round(min(100.0, max(a_i, a_i * 1.05)), 1),
+        }
 
         return {
-            "p_target": p_target,
-            "score": p_target,
-            "tier": get_tier(p_target),
-            "horizons": horizons_p,
-            "category_weight": round(cw, 1),
-            "criticality": round(crit, 1),
-            "corridor_proximity": round(corridor_prox, 1),
-            "strategic_score": strategic_score,
+            "attractiveness_index": a_i,
+            "score": a_i,
+            "p_target": a_i,
+            "tactical_status": status,
+            "status": status,
+            "status_color": status_color,
+            "tier": status,
+            "criticality": crit,
+            "c_i": crit,
+            "doctrinal_priority": doctr,
+            "d_i": doctr,
+            "category_weight": doctr,
+            "corridor_proximity": corridor_prox,
+            "exposure_vector": corridor_prox,
+            "e_i": corridor_prox,
+            "strategic_score": round(base_attractiveness, 1),
             "air_defense": air_defense,
+            "s_i": air_defense,
             "air_defense_pct": int(round(air_defense * 100)),
-            "time_hazard": h_val,
             "mitigation_factor": round(mitigation_factor, 3),
             "debris_risk": p_debris_risk,
+            "horizons": horizons_p,
+            "vulnerability": max(v_yellow, v_red),
         }
+
+    calculate_target_attractiveness = calculate_target_probability
 
     def calculate_risk_scores(self) -> dict:
         """
@@ -597,53 +691,31 @@ class KyivRiskEngine:
                     data["avg_target_prob"][m] = round(data["sum_target_prob"][m] / cnt, 1)
                 else:
                     data["avg_target_prob"][m] = 35.0
+                    data["max_target_prob"][m] = 35.0
 
-        # Strategic infrastructure concentration & inbound corridor factors
-        # Solomyanskyi (Rail Hub, Zhulyany, MOD/GenStaff, Shaiyba)
-        # Holosiivskyi (TEC-5, Novokyivska substation, Korchuvate depot)
-        # Obolonskyi (Kyiv HES, Pivnichnyi bridge, Obolon substation)
-        # Shevchenkivskyi (DAHK Artem, KB Luch, TV tower, Kyivstar, Ohmatdyt)
-        # Darnytskyi (Darnytsia station, Poznyaky substation, South bridge)
-        # Svyatoshynskyi (Antonov aviation plant)
-        # Podilskyi (Northern substation, Kurenivka cluster)
-        # Desnyanskyi (TEC-6, Desna water station)
-        # Dniprovskyi (Darnytska TEC-4, depot Darnytsia)
-        # Pecherskyi (Govt quarter - heavily shielded by Patriot dome)
-        strategic_base_weights = {
-            "Солом'янський": 18.0,
-            "Голосіївський": 18.5,
-            "Оболонський": 18.0,
-            "Шевченківський": 17.5,
-            "Дарницький": 16.0,
-            "Святошинський": 14.0,
-            "Подільський": 13.0,
-            "Деснянський": 11.0,
-            "Дніпровський": 10.0,
-            "Печерський": 8.0,
-        }
-
-        # Calculate district exposure and safety scores for each threat mode
+        # Calculate district danger and safety scores using the agreed deterministic formula:
+        # DistrictDanger(D) = Norm(0.40 * max_{i in D}(A_i) + 0.40 * avg_{i in D}(A_i) + 0.20 * CorridorPenalty(D))
         for m in ["all", "yellow", "orange", "red"]:
             for d, data in district_stats.items():
-                base_w = strategic_base_weights.get(d, 10.0)
                 avg_p = data["avg_target_prob"][m]
                 max_p = data["max_target_prob"][m]
+                cp = self.calculate_corridor_proximity(data["center_lat"], data["center_lon"], mode=m)
 
-                # Composite exposure: strategic density + peak target risk + average target risk
-                target_component = 0.60 * max_p + 0.40 * avg_p
-                raw_exposure = base_w * 1.35 + target_component * 0.78
-
-                exp_val = round(min(95.0, max(20.0, raw_exposure)), 1)
-                safety_val = round(max(5.0, 100.0 - exp_val), 1)
+                # Composite District Danger Index [0, 100]
+                raw_danger = 0.40 * max_p + 0.40 * avg_p + 0.20 * cp
+                exp_val = round(min(100.0, max(0.0, raw_danger)), 1)
+                safety_val = round(max(0.0, min(100.0, 100.0 - exp_val)), 1)
 
                 if "exposure_by_mode" not in data:
                     data["exposure_by_mode"] = {}
                     data["safety_by_mode"] = {}
                     data["status_by_mode"] = {}
                     data["badge_by_mode"] = {}
+                    data["corridor_penalty_by_mode"] = {}
 
                 data["exposure_by_mode"][m] = exp_val
                 data["safety_by_mode"][m] = safety_val
+                data["corridor_penalty_by_mode"][m] = round(cp, 1)
 
                 if exp_val >= 70:
                     st = "КРИТИЧНИЙ РИЗИК (висока щільність цілей, енергетика/ВПК)"
@@ -651,7 +723,7 @@ class KyivRiskEngine:
                 elif exp_val >= 60:
                     st = "ВИСОКИЙ РИЗИК (коридори підльоту, ТЕЦ / стратегічні підстанції)"
                     bd = "#ea580c"
-                elif exp_val >= 45:
+                elif exp_val >= 50:
                     st = "ПІДВИЩЕНИЙ РИЗИК (вузловий транспорт, резервні потужності)"
                     bd = "#eab308"
                 else:
@@ -682,6 +754,8 @@ class KyivRiskEngine:
             data["threat_rank_by_mode"] = {m: threat_rank_by_mode[m][d] for m in ["all", "yellow", "orange", "red"]}
             data["exposure_index"] = data["exposure_by_mode"]["all"]
             data["safety_score"] = data["safety_by_mode"]["all"]
+            data["danger_index"] = data["exposure_by_mode"]["all"]
+            data["corridor_penalty"] = data["corridor_penalty_by_mode"]["all"]
             data["status"] = data["status_by_mode"]["all"]
             data["badge_color"] = data["badge_by_mode"]["all"]
             data["safety_rank"] = data["safety_rank_by_mode"]["all"]
@@ -698,13 +772,13 @@ if __name__ == "__main__":
     data = engine.calculate_risk_scores()
     print("Risk evaluation complete.")
     print("Objects processed:", len(data["objects"]))
-    print("\nTop 5 highest predicted target probability facilities:")
-    top_objects = sorted(data["objects"], key=lambda o: o["scores"]["all"]["p_target"], reverse=True)[:5]
+    print("\nTop 5 highest Target Attractiveness Index facilities:")
+    top_objects = sorted(data["objects"], key=lambda o: o["scores"]["all"]["score"], reverse=True)[:5]
     for obj in top_objects:
         s = obj["scores"]["all"]
-        print(f"  - {obj['name']} ({obj['district']}): P_Target = {s['p_target']}% [{s['tier']}] "
-              f"(CatWeight: {s['category_weight']}, Corridor: {s['corridor_proximity']}, Shield: {s['air_defense_pct']}%)")
+        print(f"  - {obj['name']} ({obj['district']}): A_i = {s['score']}/100 [{s['status']}] "
+              f"(Crit: {s['criticality']}, Doctr: {s['doctrinal_priority']}, Corridor: {s['corridor_proximity']}, Shield: {s['air_defense_pct']}%)")
 
     print("\nTop 3 safest districts:")
     for d in data["districts"][:3]:
-        print(f"  #{d['safety_rank']} {d['district']}: Safety Score {d['safety_score']}% (Exposure Index {d['exposure_index']})")
+        print(f"  #{d['safety_rank']} {d['district']}: Safety Score {d['safety_score']}% (Danger Index {d['exposure_index']})")

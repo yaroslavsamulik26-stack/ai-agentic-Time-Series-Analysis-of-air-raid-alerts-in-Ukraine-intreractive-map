@@ -63,7 +63,7 @@ def main():
     print(f"      Ranked districts: {len(risk_data['districts'])}")
     print("\n      Top Safest Districts:")
     for d in risk_data["districts"][:3]:
-        print(f"        - #{d['safety_rank']} {d['district']}: Safety Score {d['safety_score']}% (Threat Index {d['exposure_index']})")
+        print(f"        - #{d['safety_rank']} {d['district']}: Safety Score {d['safety_score']}% (Danger Index {d['exposure_index']}/100)")
 
     # 4. Map Dashboard Generation
     print("\n[4/4] Building Interactive Web Dashboard (Leaflet + Google Maps Tiles)...")

@@ -937,7 +937,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         </div>
 
         <!-- Forecast Horizon Selector -->
-        <div class="time-range-modes" title="Горизонт прогнозування ймовірності P_Target">
+        <div class="time-range-modes" title="Горизонт оцінки привабливості цілей (A_i)" data-metric="A_i (P_Target)">
             <button class="time-btn" data-range="24h" onclick="setTimeRange('24h')" title="Тактичний добовий горизонт (24 години)">
                 <i class="fa-solid fa-clock"></i> 24 год
             </button>
@@ -1019,7 +1019,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         <div class="panel-tabs">
             <div class="panel-tab active" onclick="switchPanelTab('tab-districts')">Райони (Рівень небезпеки)</div>
             <div class="panel-tab" onclick="switchPanelTab('tab-objects')">Об'єкти & ППО</div>
-            <div class="panel-tab" onclick="switchPanelTab('tab-priority-targets')">Пріоритетні цілі & Прогноз</div>
+            <div class="panel-tab" onclick="switchPanelTab('tab-priority-targets')">Пріоритетні цілі & Привабливість для ворога</div>
             <div class="panel-tab" onclick="switchPanelTab('tab-notebooklm')">OSINT Зведення</div>
         </div>
 
@@ -1029,7 +1029,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 <div class="filter-section">
                     <div class="section-title"><i class="fa-solid fa-shield-halved"></i> Рівень небезпеки районів Києва</div>
                     <p style="font-size:10px; color:var(--text-muted); margin-bottom:8px;">
-                        Оцінка за рівнем небезпеки та ймовірністю ураження інфраструктури (враховує ППО, концентрацію цілей та вектори загроз). Клікніть на район для фокусу.
+                        Оцінка за рівнем стратегічної небезпеки та індексами привабливості об'єктів для ворога (враховує ППО, концентрацію цілей та вектори загроз). Клікніть на район для фокусу.
                     </p>
                     <div id="districts-list">
                         <!-- Rendered by JS -->
@@ -1089,9 +1089,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             <!-- Tab 3: Priority Targets & Forecast -->
             <div id="tab-priority-targets" class="tab-pane">
                 <div class="filter-section">
-                    <div class="section-title" id="priority-targets-tab-title"><i class="fa-solid fa-crosshairs"></i> Пріоритетні цілі & Прогноз</div>
+                    <div class="section-title" id="priority-targets-tab-title"><i class="fa-solid fa-crosshairs"></i> Пріоритетні цілі & Привабливість для ворога</div>
                     <p style="font-size:10px; color:var(--text-muted); margin-bottom:8px;">
-                        Рейтинг уцілілих критичних об'єктів за прогнозованою ймовірністю удару P<sub>Target</sub> (Гібридна модель: Часовий ризик H &times; Стратегічний пріоритет &times; Захист ППО).
+                        Рейтинг уцілілих критичних об'єктів за індексом стратегічної небезпеки та привабливості для ворога A<sub>i</sub> (Стратегічна критичність C<sub>i</sub> &times; Доктринальний інтерес D<sub>i</sub> &times; Вектори загроз E<sub>i</sub> &times; Захист ППО S<sub>i</sub>).
                     </p>
                     <div class="search-input-box">
                         <input type="text" class="search-input" id="targetsSearchInput" placeholder="Пошук цілі за назвою або районом..." oninput="onSearchTargets(this.value)">
@@ -1142,12 +1142,19 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <!-- Legend Overlay -->
     <div class="map-legend">
         <div style="font-weight:700; margin-bottom:2px; color:#cbd5e1;">Рівень небезпеки районів:</div>
-        <div class="legend-item"><div class="legend-color" style="background:#dc2626;"></div> &gt;70%: Критичний рівень небезпеки</div>
-        <div class="legend-item"><div class="legend-color" style="background:#ea580c;"></div> 60-69%: Високий рівень небезпеки</div>
-        <div class="legend-item"><div class="legend-color" style="background:#eab308;"></div> 45-59%: Підвищений рівень небезпеки</div>
-        <div class="legend-item"><div class="legend-color" style="background:#10b981;"></div> &lt;45%: Помірний рівень небезпеки</div>
+        <div class="legend-item"><div class="legend-color" style="background:#dc2626;"></div> &ge;70/100: Критичний рівень небезпеки</div>
+        <div class="legend-item"><div class="legend-color" style="background:#ea580c;"></div> 60-69/100: Високий рівень небезпеки</div>
+        <div class="legend-item"><div class="legend-color" style="background:#eab308;"></div> 50-59/100: Підвищений рівень небезпеки</div>
+        <div class="legend-item"><div class="legend-color" style="background:#10b981;"></div> &lt;50/100: Помірний рівень небезпеки</div>
         <div style="margin-top:4px; border-top:1px solid rgba(255,255,255,0.1); padding-top:4px; display:flex; flex-direction:column; gap:3px;">
-            <div class="legend-item"><i class="fa-solid fa-crosshairs" style="color:#ef4444; font-size:10px;"></i> Уцілілі цілі (P<sub>Target</sub> прогноз)</div>
+            <div style="font-weight:700; margin-bottom:1px; color:#cbd5e1;">Тактичний статус цілей (A<sub>i</sub>):</div>
+            <div class="legend-item"><div class="legend-color" style="background:#dc2626;"></div> 80-100: Критична ціль</div>
+            <div class="legend-item"><div class="legend-color" style="background:#ea580c;"></div> 65-79: Високий пріоритет</div>
+            <div class="legend-item"><div class="legend-color" style="background:#eab308;"></div> 50-64: Підвищена увага</div>
+            <div class="legend-item"><div class="legend-color" style="background:#16a34a;"></div> &lt;50: Помірний ризик</div>
+        </div>
+        <div style="margin-top:4px; border-top:1px solid rgba(255,255,255,0.1); padding-top:4px; display:flex; flex-direction:column; gap:3px;">
+            <div class="legend-item"><i class="fa-solid fa-crosshairs" style="color:#ef4444; font-size:10px;"></i> Пріоритетні цілі (Індекс небезпеки A<sub>i</sub>)</div>
             <div class="legend-item"><i class="fa-solid fa-shield-halved" style="color:#10b981; font-size:10px;"></i> Ешелон ППО & турелі</div>
             <div class="legend-item"><i class="fa-solid fa-route" style="color:#38bdf8; font-size:10px;"></i> Вектор підльоту загроз</div>
         </div>
@@ -1244,7 +1251,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                         <i class="fa-solid fa-scale-balanced"></i> 6. Офіційні джерела даних & Репозиторії (Authoritative Sources)
                     </h3>
                     <p style="font-size:11px; line-height:1.45; color:#cbd5e1; margin-bottom:8px;">
-                        ⚠️ <b>Чому на карті відсутні окремі точки ударів:</b> Відповідно до вимог операційної безпеки та достовірності, офіційні джерела публікують інформацію виключно на рівні районів столиці без чутливих точних координат уражень. Замість неточних точкових маркерів проєкт використовує <b>Гібридну предиктивну модель</b> прогнозування імовірності P<sub>Target</sub> для уцілілих об'єктів критичної інфраструктури.
+                        ⚠️ <b>Чому на карті відсутні окремі точки ударів:</b> Відповідно до вимог операційної безпеки та достовірності, офіційні джерела публікують інформацію виключно на рівні районів столиці без чутливих точних координат уражень. Замість неточних точкових маркерів проєкт використовує <b>Дворівневу архітектуру моделювання оборони</b>: <b>Time Series Hazard Engine («КОЛИ»)</b> для часового вікна загрози та <b>Target Attractiveness Engine («КУДИ»)</b> для детермінованого розрахунку індексу небезпеки об'єктів A<sub>i</sub> без стохастичного вгадування кінетичного влучання.
                     </p>
                     <div style="display:flex; flex-direction:column; gap:6px; font-size:11px; color:#cbd5e1;">
                         <div>• <b>Командування Повітряних Сил ЗСУ (Official Air Force Releases):</b> щоденні зведення про кількість, типи пусків (Shahed-136/238, Х-101, Кинджал, Іскандер-М) та відсоток перехоплення.</div>
@@ -1287,6 +1294,22 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 <div class="metric-card">
                     <div class="metric-val" id="metric-alerts-cnt">169</div>
                     <div class="metric-label">Тривог проаналізовано</div>
+                </div>
+            </div>
+
+            <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:10px; padding:12px; margin-bottom:14px;">
+                <h3 style="font-size:13px; font-weight:700; margin-bottom:8px; color:#38bdf8; display:flex; align-items:center; gap:6px;">
+                    <i class="fa-solid fa-layer-group"></i> Дворівнева концепція: «КОЛИ» та «КУДИ»
+                </h3>
+                <div style="display:flex; flex-direction:column; gap:8px; font-size:11.5px; line-height:1.5; color:#cbd5e1;">
+                    <div>
+                        <b style="color:#eab308;"><i class="fa-solid fa-clock"></i> Time Series Hazard Engine («КОЛИ»):</b>
+                        Оцінює часове вікно загрози столиці (добові піки, фази відновлення та накопичення запасів ворогом) на основі валідованих часових рядів тривог без заглядання у майбутнє.
+                    </div>
+                    <div>
+                        <b style="color:#f43f5e;"><i class="fa-solid fa-crosshairs"></i> Target Attractiveness Engine («КУДИ»):</b>
+                        Визначає просторові цілі та детермінований індекс небезпеки об'єктів під час атаки (A<sub>i</sub> &in; [0, 100]) на основі критичності C<sub>i</sub>, доктрини ворога D<sub>i</sub>, відкритих векторів E<sub>i</sub> та захисту ППО S<sub>i</sub>.
+                    </div>
                 </div>
             </div>
 
@@ -1338,10 +1361,17 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         ]);
 
         function getScoreTier(score) {
-            if (score >= 70) return 'Критичний';
-            if (score >= 50) return 'Високий';
-            if (score >= 30) return 'Середній';
-            return 'Помірний';
+            if (score >= 80) return 'Критична ціль';
+            if (score >= 65) return 'Високий пріоритет';
+            if (score >= 50) return 'Підвищена увага';
+            return 'Помірний ризик';
+        }
+
+        function getDistrictColor(expVal) {
+            if (expVal >= 70) return '#dc2626';
+            if (expVal >= 60) return '#ea580c';
+            if (expVal >= 50) return '#eab308';
+            return '#10b981';
         }
 
         function getDistrictStatusInfo(expVal) {
@@ -1355,7 +1385,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     status: "ВИСОКИЙ РИЗИК (коридори підльоту, ТЕЦ / стратегічні підстанції)",
                     badge: "#ea580c"
                 };
-            } else if (expVal >= 45) {
+            } else if (expVal >= 50) {
                 return {
                     status: "ПІДВИЩЕНИЙ РИЗИК (вузловий транспорт, резервні потужності)",
                     badge: "#eab308"
@@ -1374,19 +1404,21 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 btn.classList.toggle('active', btn.dataset.range === rangeKey);
             });
 
-            // Update P_Target and tier for every object based on exact precalculated horizon
+            // Update Target Attractiveness Index and status for every object based on exact precalculated horizon
             RISK_DATA.objects.forEach(obj => {
                 for (const m of ['all', 'yellow', 'orange', 'red']) {
                     if (obj.scores && obj.scores[m]) {
                         const hMap = obj.scores[m].horizons || {};
                         const val = (hMap[rangeKey] !== undefined)
                             ? hMap[rangeKey]
-                            : ((rangeKey === '24h') ? Math.max(5.0, Math.round(obj.scores[m].p_target * 0.76 * 10) / 10)
-                              : (rangeKey === '30d') ? Math.min(100.0, Math.round(obj.scores[m].p_target * 1.13 * 10) / 10)
-                              : obj.scores[m].p_target);
+                            : ((rangeKey === '24h') ? Math.min(obj.scores[m].score, Math.round(obj.scores[m].score * 0.85 * 10) / 10)
+                              : (rangeKey === '30d') ? Math.min(100.0, Math.max(obj.scores[m].score, Math.round(obj.scores[m].score * 1.05 * 10) / 10))
+                              : obj.scores[m].score);
                         obj.scores[m].p_target = val;
                         obj.scores[m].score = val;
+                        obj.scores[m].attractiveness_index = val;
                         obj.scores[m].tier = getScoreTier(val);
+                        obj.scores[m].status = getScoreTier(val);
                     }
                 }
             });
@@ -1399,13 +1431,17 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                         d.base_exposure = { ...d.exposure_by_mode };
                         d.base_safety = { ...d.safety_by_mode };
                         d.base_avg_p = { ...d.avg_target_prob };
+                        d.base_max_p = { ...d.max_target_prob };
                     }
                     const baseExp = d.base_exposure[m] || 50.0;
                     const adjExp = Math.min(95.0, Math.max(15.0, Math.round(baseExp * hMultiplier * 10) / 10));
                     d.exposure_by_mode[m] = adjExp;
                     d.safety_by_mode[m] = Math.round((100.0 - adjExp) * 10) / 10;
-                    if (d.base_avg_p && d.base_avg_p[m]) {
+                    if (d.base_avg_p && d.base_avg_p[m] !== undefined) {
                         d.avg_target_prob[m] = Math.round(d.base_avg_p[m] * hMultiplier * 10) / 10;
+                    }
+                    if (d.base_max_p && d.base_max_p[m] !== undefined) {
+                        d.max_target_prob[m] = Math.min(100.0, Math.round(d.base_max_p[m] * hMultiplier * 10) / 10);
                     }
                     const stInfo = getDistrictStatusInfo(adjExp);
                     if (d.status_by_mode) d.status_by_mode[m] = stInfo.status;
@@ -1413,7 +1449,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
                     if (m === currentThreatMode || (currentThreatMode === 'all' && m === 'all')) {
                         d.exposure_index = adjExp;
+                        d.danger_index = adjExp;
                         d.safety_score = d.safety_by_mode[m];
+                        if (d.corridor_penalty_by_mode && d.corridor_penalty_by_mode[m] !== undefined) {
+                            d.corridor_penalty = d.corridor_penalty_by_mode[m];
+                        }
                         d.status = stInfo.status;
                         d.badge_color = stInfo.badge;
                     }
@@ -1426,9 +1466,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 sorted.forEach((d, idx) => {
                     if (d.rank_by_mode) d.rank_by_mode[m] = idx + 1;
                     if (d.safety_rank_by_mode) d.safety_rank_by_mode[m] = idx + 1;
+                    if (d.threat_rank_by_mode) d.threat_rank_by_mode[m] = 11 - (idx + 1);
                     if (m === currentThreatMode || (currentThreatMode === 'all' && m === 'all')) {
                         d.safety_rank = idx + 1;
-                        d.threat_rank = idx + 1;
+                        d.threat_rank = 11 - (idx + 1);
                     }
                 });
             }
@@ -1573,10 +1614,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }
 
         function getScoreColor(score) {
-            if (score >= 70) return '#dc2626'; // Red / Critical
-            if (score >= 60) return '#ea580c'; // Orange / High
-            if (score >= 45) return '#eab308'; // Yellow / Moderate-High
-            return '#10b981'; // Green / Moderate
+            if (score >= 80) return '#dc2626'; // Red / Critical target
+            if (score >= 65) return '#ea580c'; // Orange / High priority
+            if (score >= 50) return '#eab308'; // Yellow / Elevated attention
+            return '#16a34a'; // Green / Moderate risk
         }
 
         function getCategoryIcon(cat) {
@@ -1631,7 +1672,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     const exposure = (stats.exposure_by_mode && stats.exposure_by_mode[modeKey] !== undefined)
                         ? stats.exposure_by_mode[modeKey]
                         : (stats.exposure_index || 50);
-                    const col = getScoreColor(exposure);
+                    const col = (stats.badge_by_mode && stats.badge_by_mode[modeKey]) || stats.badge_color || getDistrictColor(exposure);
                     return {
                         fillColor: col,
                         fillOpacity: 0.22,
@@ -1652,14 +1693,14 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                         : (stats.safety_score || 50);
                     const rank = (stats.rank_by_mode && stats.rank_by_mode[modeKey] !== undefined)
                         ? stats.rank_by_mode[modeKey]
-                        : (stats.threat_rank || '-');
+                        : (stats.safety_rank || '-');
                     const status = (stats.status_by_mode && stats.status_by_mode[modeKey] !== undefined)
                         ? stats.status_by_mode[modeKey]
                         : (stats.status || '');
                     const incidents = (stats.incidents_by_mode && stats.incidents_by_mode[modeKey] !== undefined)
                         ? stats.incidents_by_mode[modeKey]
                         : (stats.incidents_count || 0);
-                    const col = getScoreColor(exposure);
+                    const col = (stats.badge_by_mode && stats.badge_by_mode[modeKey]) || stats.badge_color || getDistrictColor(exposure);
 
                     layer.on('mouseover', function(e) {
                         layer.setStyle({
@@ -1681,18 +1722,29 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                                       (currentThreatMode === 'red') ? 'Ракети (Крилаті / Балістика)' : 'Всі загрози';
 
                     const safeCol = (safety >= 65) ? '#10b981' : (safety >= 50) ? '#38bdf8' : (safety >= 40) ? '#eab308' : '#f43f5e';
+                    const maxA = (stats.max_target_prob && stats.max_target_prob[modeKey] !== undefined)
+                        ? stats.max_target_prob[modeKey]
+                        : '—';
+                    const avgA = (stats.avg_target_prob && stats.avg_target_prob[modeKey] !== undefined)
+                        ? stats.avg_target_prob[modeKey]
+                        : '—';
+                    const cpVal = (stats.corridor_penalty_by_mode && stats.corridor_penalty_by_mode[modeKey] !== undefined)
+                        ? stats.corridor_penalty_by_mode[modeKey]
+                        : (stats.corridor_penalty !== undefined ? stats.corridor_penalty : '—');
 
                     const popup = `
                         <div class="popup-title">${dName} район</div>
-                        <div class="popup-cat">Режим: <b>${modeLabel}</b> • Ранг небезпеки: <b>#${rank}</b></div>
+                        <div class="popup-cat">Режим: <b>${modeLabel}</b> • Ранг безпеки: <b>#${rank}</b></div>
                         <div class="popup-score-box">
                             <span style="font-size:11px; color:#cbd5e1;">Рівень небезпеки:</span>
                             <span class="popup-score-num" style="color:${col};">${exposure}/100</span>
                         </div>
-                        <div style="font-size:11px; margin-bottom:4px;">
-                            Ймовірність ураження: <b style="color:${col};">${exposure}%</b><br>
-                            Статус: <b style="color:${col};">${status}</b><br>
-                            Цільових об'єктів: <b>${stats.objects_count || 0}</b> | Сер. P<sub>Target</sub>: <b>${(stats.avg_target_prob && stats.avg_target_prob[modeKey] !== undefined) ? stats.avg_target_prob[modeKey] + '%' : '—'}</b>
+                        <div style="font-size:11px; margin-bottom:4px; line-height:1.5;">
+                            <div>Статус: <b style="color:${col};">${status}</b></div>
+                            <div>Цільових об'єктів: <b>${stats.objects_count || 0}</b></div>
+                            <div style="font-size:10px; color:#94a3b8; margin-top:3px; border-top:1px solid rgba(255,255,255,0.08); padding-top:3px;">
+                                <b>Фактори небезпеки:</b> Макс A<sub>i</sub>: <b>${maxA}</b> | Сер. A<sub>i</sub>: <b>${avgA}</b> | Коридор: <b>${cpVal}</b>
+                            </div>
                         </div>
                         <div class="popup-desc">${feature.properties.description || ''}</div>
                     `;
@@ -1736,8 +1788,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 `;
 
                 const pulseClass = isDefense ? '' : (
-                    ((currentThreatMode === 'red' || currentThreatMode === 'all') && score >= 70) ? 'pulse-marker-red' :
-                    (currentThreatMode === 'yellow' && score >= 70 ? 'pulse-marker-yellow' : '')
+                    ((currentThreatMode === 'red' || currentThreatMode === 'all') && score >= 80) ? 'pulse-marker-red' :
+                    (currentThreatMode === 'yellow' && score >= 80 ? 'pulse-marker-yellow' : '')
                 );
 
                 const customIcon = L.divIcon({
@@ -1756,15 +1808,16 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 marker.on('mouseout', function() { this.setZIndexOffset(0); });
                 obj._marker = marker;
 
-                const scoreLabel = isDefense ? 'Індекс активності ППО:' : 'Ймовірність удару P<sub>Target</sub>:';
+                const scoreLabel = isDefense ? 'Індекс активності ППО:' : 'Індекс небезпеки:';
+                const statusName = isDefense ? 'Активний сектор перехоплення' : (scoreObj.status || scoreObj.tier || getScoreTier(score));
                 const statusLabel = isDefense ?
                     `Статус: <b style="color:#10b981;">Активний сектор перехоплення</b>` :
-                    `Статус: <b style="color:${scoreColor};">${tier}</b> | Захист ППО: -${scoreObj.air_defense_pct || 0}%`;
+                    `Статус: <b style="color:${scoreColor};">${statusName}</b> | Захист ППО: ${scoreObj.air_defense_pct || 0}%`;
 
-                const cwText = scoreObj.category_weight !== undefined ? `${scoreObj.category_weight} б.` : '—';
-                const critText = scoreObj.criticality !== undefined ? `${scoreObj.criticality} б.` : '—';
+                const critVal = scoreObj.criticality !== undefined ? scoreObj.criticality : '—';
+                const doctrVal = scoreObj.doctrinal_priority !== undefined ? scoreObj.doctrinal_priority : (scoreObj.category_weight !== undefined ? scoreObj.category_weight : '—');
+                const adPct = scoreObj.air_defense_pct !== undefined ? scoreObj.air_defense_pct : 0;
                 const proxText = scoreObj.corridor_proximity !== undefined ? `${scoreObj.corridor_proximity} б.` : 'Віддалений';
-                const adText = scoreObj.air_defense_pct !== undefined ? `-${scoreObj.air_defense_pct}% (Щит рубежу)` : 'Базовий';
 
                 let extraDetailsHtml = '';
                 if (obj.connects) {
@@ -1789,7 +1842,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     extraDetailsHtml += `<div><b>Площа мега-хабу:</b> ${obj.gross_area}</div>`;
                 }
                 if (scoreObj.debris_risk && scoreObj.debris_risk > 0) {
-                    extraDetailsHtml += `<div><b>Ризик уламків (P_Debris):</b> ${scoreObj.debris_risk}%</div>`;
+                    extraDetailsHtml += `<div><b>Ризик падіння уламків:</b> ${scoreObj.debris_risk}%</div>`;
                 }
                 if (obj.debris_risk_note) {
                     extraDetailsHtml += `<div><b>Фактор ризику уламків:</b> ${obj.debris_risk_note}</div>`;
@@ -1800,7 +1853,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     <div class="popup-cat" style="color:${color}; font-weight:600;"><i class="fa-solid ${getCategoryIcon(obj.category)}"></i> ${formatCategoryUA(obj.category)} • ${obj.district}</div>
                     <div class="popup-score-box">
                         <span style="font-size:11px; color:#cbd5e1;">${scoreLabel}</span>
-                        <span class="popup-score-num" style="color:${scoreColor};">${score}%</span>
+                        <span class="popup-score-num" style="color:${scoreColor};">${score}/100</span>
                     </div>
                     <div style="font-size:10px; margin-bottom:6px; color:#94a3b8;">
                         ${statusLabel}
@@ -1808,10 +1861,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     <div style="font-size:11px; line-height:1.5; color:#cbd5e1; margin-top:6px; border-top:1px solid rgba(255,255,255,0.1); padding-top:6px;">
                         <div><b>Район:</b> ${obj.district} район</div>
                         <div><b>Категорія:</b> ${formatCategoryUA(obj.category)}</div>
-                        <div><b>Ймовірність ураження:</b> ${score}% (${tier})</div>
-                        <div><b>Пріоритетність цілі:</b> ${cwText} (Критичність: ${critText})</div>
+                        <div><b>Індекс небезпеки:</b> ${score}/100 (${statusName})</div>
+                        <div><b>Стратегічна критичність:</b> ${critVal}/100</div>
+                        <div><b>Доктринальний інтерес:</b> ${doctrVal}/100</div>
+                        <div><b>Захист ППО:</b> ${adPct}%</div>
                         <div><b>Вектор підльоту:</b> ${proxText}</div>
-                        <div><b>Захист ППО:</b> ${adText}</div>
                         ${extraDetailsHtml}
                         <div><b>Опис об'єкта:</b> ${obj.description}</div>
                     </div>
@@ -1919,12 +1973,20 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             RISK_DATA.districts.forEach(d => {
                 if (d.exposure_by_mode && d.exposure_by_mode[modeKey] !== undefined) {
                     d.exposure_index = d.exposure_by_mode[modeKey];
+                    d.danger_index = d.exposure_by_mode[modeKey];
                     d.safety_score = d.safety_by_mode[modeKey];
+                    if (d.corridor_penalty_by_mode && d.corridor_penalty_by_mode[modeKey] !== undefined) {
+                        d.corridor_penalty = d.corridor_penalty_by_mode[modeKey];
+                    }
                     if (d.status_by_mode) d.status = d.status_by_mode[modeKey];
                     if (d.badge_by_mode) d.badge_color = d.badge_by_mode[modeKey];
                     if (d.rank_by_mode && d.rank_by_mode[modeKey]) {
                         d.safety_rank = d.rank_by_mode[modeKey];
-                        d.threat_rank = d.rank_by_mode[modeKey];
+                    }
+                    if (d.threat_rank_by_mode && d.threat_rank_by_mode[modeKey]) {
+                        d.threat_rank = d.threat_rank_by_mode[modeKey];
+                    } else if (d.rank_by_mode && d.rank_by_mode[modeKey]) {
+                        d.threat_rank = 11 - d.rank_by_mode[modeKey];
                     }
                 }
             });
@@ -2039,14 +2101,14 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     map.flyTo([d.center_lat, d.center_lon], 13);
                     if (districtLayerMap[d.district]) districtLayerMap[d.district].openPopup();
                 };
-                const expColor = getScoreColor(exposure);
+                const expColor = badgeColor || getDistrictColor(exposure);
                 card.innerHTML = `
                     <div class="district-info">
                         <h4>#${rank} ${d.district}</h4>
                         <p>${status} • Об'єктів цілей: ${d.objects_count || 0}</p>
                     </div>
                     <div class="score-pill" style="background:${expColor}22; color:${expColor}; border:1px solid ${expColor}; font-weight:700;">
-                        ${exposure}% небезпека
+                        ${exposure}/100 небезпека
                     </div>
                 `;
                 container.appendChild(card);
@@ -2073,6 +2135,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 const isDefense = obj.category === 'defense';
                 const scoreObj = obj.scores[currentThreatMode] || obj.scores['all'];
                 const score = scoreObj.score;
+                const statusName = isDefense ? 'Активний сектор' : (scoreObj.status || scoreObj.tier || getScoreTier(score));
                 const catColor = isDefense ? '#10b981' : getCategoryColor(obj.category);
                 const scoreColor = isDefense ? '#10b981' : getScoreColor(score);
                 const card = document.createElement('div');
@@ -2081,13 +2144,24 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     map.flyTo([obj.lat, obj.lon], 15);
                     if (obj._marker) obj._marker.openPopup();
                 };
+                const pillLabel = isDefense ? `ППО: ${score}/100` : `Індекс небезпеки: ${score}/100`;
+                const crit = scoreObj.criticality !== undefined ? scoreObj.criticality : '—';
+                const cw = scoreObj.doctrinal_priority !== undefined ? scoreObj.doctrinal_priority : (scoreObj.category_weight !== undefined ? scoreObj.category_weight : '—');
+                const adPct = scoreObj.air_defense_pct !== undefined ? scoreObj.air_defense_pct : 0;
+                const subLine = isDefense ? `Ешелон прикриття: <b>${adPct}%</b>` : `Критичність: <b>${crit}</b>/100 | Доктрина: <b>${cw}</b>/100 | ППО: <b>${adPct}%</b>`;
                 card.innerHTML = `
                     <div class="district-info">
                         <h4><i class="fa-solid ${getCategoryIcon(obj.category)}" style="color:${catColor}; font-size:12px; margin-right:5px;"></i>${obj.name}</h4>
                         <p>${obj.district} • <span style="color:${catColor}; font-weight:600;">${formatCategoryUA(obj.category)}</span></p>
+                        <div style="font-size:9.5px; color:#94a3b8; margin-top:2px;">
+                            ${subLine}
+                        </div>
                     </div>
-                    <div class="score-pill" style="background:${scoreColor}33; color:${scoreColor}; border:1px solid ${scoreColor}; font-weight:700;">
-                        ${score}%
+                    <div style="display:flex; flex-direction:column; align-items:flex-end; gap:3px;">
+                        <div class="score-pill" style="background:${scoreColor}22; color:${scoreColor}; border:1px solid ${scoreColor}; font-weight:700; white-space:nowrap;">
+                            ${pillLabel}
+                        </div>
+                        <span style="font-size:9.5px; color:${scoreColor}; font-weight:600;">${statusName}</span>
                     </div>
                 `;
                 container.appendChild(card);
@@ -2100,7 +2174,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             container.innerHTML = '';
 
             const modeKey = (currentThreatMode === 'all') ? 'all' : currentThreatMode;
-            // Rank non-defense intact facilities by predicted hit probability P_Target
+            // Rank non-defense intact facilities by deterministic Target Attractiveness Index A_i
             let targets = RISK_DATA.objects.filter(o => o.category !== 'defense' && activeCategories.has(o.category));
             if (searchQueryTargets) {
                 targets = targets.filter(o =>
@@ -2110,9 +2184,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             }
 
             targets.sort((a, b) => {
-                const probA = (a.scores[modeKey] && a.scores[modeKey].p_target !== undefined) ? a.scores[modeKey].p_target : (a.scores['all'].p_target || 0);
-                const probB = (b.scores[modeKey] && b.scores[modeKey].p_target !== undefined) ? b.scores[modeKey].p_target : (b.scores['all'].p_target || 0);
-                return probB - probA;
+                const probA = (a.scores[modeKey] && a.scores[modeKey].score !== undefined) ? a.scores[modeKey].score : (a.scores['all'].score || 0);
+                const probB = (b.scores[modeKey] && b.scores[modeKey].score !== undefined) ? b.scores[modeKey].score : (b.scores['all'].score || 0);
+                if (probB !== probA) return probB - probA;
+                const critA = (a.scores[modeKey] && a.scores[modeKey].criticality !== undefined) ? a.scores[modeKey].criticality : 0;
+                const critB = (b.scores[modeKey] && b.scores[modeKey].criticality !== undefined) ? b.scores[modeKey].criticality : 0;
+                if (critB !== critA) return critB - critA;
+                return (a.name || '').localeCompare(b.name || '');
             });
 
             if (targets.length === 0) {
@@ -2122,12 +2200,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
             targets.forEach((obj, idx) => {
                 const scoreObj = obj.scores[modeKey] || obj.scores['all'];
-                const prob = (scoreObj.p_target !== undefined) ? scoreObj.p_target : scoreObj.score;
-                const tier = scoreObj.tier || 'Середній';
+                const prob = (scoreObj.score !== undefined) ? scoreObj.score : scoreObj.p_target;
+                const statusName = scoreObj.status || scoreObj.tier || getScoreTier(prob);
                 const catColor = getCategoryColor(obj.category);
                 const color = getScoreColor(prob);
-                const cw = scoreObj.category_weight !== undefined ? scoreObj.category_weight : '—';
-                const prox = scoreObj.corridor_proximity !== undefined ? scoreObj.corridor_proximity : '—';
+                const cw = scoreObj.doctrinal_priority !== undefined ? scoreObj.doctrinal_priority : (scoreObj.category_weight !== undefined ? scoreObj.category_weight : '—');
+                const crit = scoreObj.criticality !== undefined ? scoreObj.criticality : '—';
                 const adPct = scoreObj.air_defense_pct !== undefined ? scoreObj.air_defense_pct : 0;
 
                 const card = document.createElement('div');
@@ -2141,14 +2219,14 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                         <h4>#${idx + 1} <i class="fa-solid ${getCategoryIcon(obj.category)}" style="color:${catColor}; font-size:11px; margin-right:4px;"></i>${obj.name}</h4>
                         <p>${obj.district} • <span style="color:${catColor}; font-weight:600;"><i class="fa-solid ${getCategoryIcon(obj.category)}"></i> ${formatCategoryUA(obj.category)}</span></p>
                         <div style="font-size:9.5px; color:#94a3b8; margin-top:2px;">
-                            Ціль: <b>${cw}</b> б. | Вектор: <b>${prox}</b> б. | ППО: <b>-${adPct}%</b>
+                            Критичність: <b>${crit}</b>/100 | Доктрина: <b>${cw}</b>/100 | ППО: <b>${adPct}%</b>
                         </div>
                     </div>
                     <div style="display:flex; flex-direction:column; align-items:flex-end; gap:3px;">
-                        <div class="score-pill" style="background:${color}33; color:${color}; border:1px solid ${color}; font-weight:700;">
-                            P<sub>Target</sub>: ${prob}%
+                        <div class="score-pill" style="background:${color}22; color:${color}; border:1px solid ${color}; font-weight:700; white-space:nowrap;">
+                            Індекс небезпеки: ${prob}/100
                         </div>
-                        <span style="font-size:9px; color:${color}; font-weight:600;">${tier}</span>
+                        <span style="font-size:9.5px; color:${color}; font-weight:600;">${statusName}</span>
                     </div>
                 `;
                 container.appendChild(card);
@@ -2156,8 +2234,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
             const titleEl = document.getElementById('priority-targets-tab-title');
             if (titleEl) {
-                const modeLabel = currentThreatMode === 'yellow' ? 'БпЛА (Shahed)' : (currentThreatMode === 'red' ? 'Ракети' : 'Всі загрози');
-                titleEl.innerHTML = `<i class="fa-solid fa-crosshairs"></i> Пріоритетні цілі & Прогноз (${modeLabel}, ${currentTimeRange})`;
+                const modeLabel = currentThreatMode === 'yellow' ? 'Ударні БпЛА (Shahed)' : (currentThreatMode === 'red' ? 'Ракети (Крилаті / Балістика)' : 'Всі загрози');
+                titleEl.innerHTML = `<i class="fa-solid fa-crosshairs"></i> Пріоритетні цілі & Привабливість для ворога (${modeLabel})`;
             }
         }
 

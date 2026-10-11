@@ -11,7 +11,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.parser import KyivDataIngestionPipeline
-from src.risk_engine import KyivRiskEngine, haversine_distance_km
+from src.risk_engine import KyivRiskEngine, haversine_distance_km, get_target_tactical_status
 from src.time_series import KyivAlertTimeSeriesAnalyzer
 
 
@@ -300,10 +300,108 @@ class TestKyivDefensePipeline(unittest.TestCase):
                     self.assertLessEqual(scores[mode]["horizons"][h_key], 100.0)
                 self.assertLessEqual(scores[mode]["horizons"]["24h"], scores[mode]["horizons"]["30d"])
 
+                # Verify deterministic Target Attractiveness fields and formula
+                self.assertIn("attractiveness_index", scores[mode])
+                self.assertIn("c_i", scores[mode])
+                self.assertIn("d_i", scores[mode])
+                self.assertIn("e_i", scores[mode])
+                self.assertIn("s_i", scores[mode])
+                self.assertIn("tactical_status", scores[mode])
+                self.assertIn("status_color", scores[mode])
+                expected_st, expected_col = get_target_tactical_status(scores[mode]["attractiveness_index"])
+                self.assertEqual(scores[mode]["tactical_status"], expected_st)
+                self.assertEqual(scores[mode]["status_color"], expected_col)
+
+                # Check formula A_i = (0.45*C_i + 0.35*D_i + 0.20*E_i) * (1 - 0.40*S_i)
+                expected_ai = round(min(100.0, max(0.0, (
+                    0.45 * scores[mode]["c_i"] +
+                    0.35 * scores[mode]["d_i"] +
+                    0.20 * scores[mode]["e_i"]
+                ) * (1.0 - 0.40 * scores[mode]["s_i"]))), 1)
+                self.assertAlmostEqual(scores[mode]["attractiveness_index"], expected_ai, delta=0.1)
+
+        # Tactical status thresholds validation
+        self.assertEqual(get_target_tactical_status(85.0), ("Критична ціль", "#dc2626"))
+        self.assertEqual(get_target_tactical_status(72.0), ("Високий пріоритет", "#ea580c"))
+        self.assertEqual(get_target_tactical_status(55.0), ("Підвищена увага", "#eab308"))
+        self.assertEqual(get_target_tactical_status(42.0), ("Помірний ризик", "#16a34a"))
+
         # Verify dynamic calibrated district spectrum spanning tiers
         all_exposures = [d["exposure_index"] for d in results["districts"]]
         self.assertTrue(any(exp >= 60.0 for exp in all_exposures), "High risk tier (>=60) must be populated")
-        self.assertTrue(any(exp <= 45.0 for exp in all_exposures), "Moderate risk tier (<=45) must be populated")
+        self.assertTrue(any(exp < 50.0 for exp in all_exposures), "Moderate risk tier (<50) must be populated")
+
+        # Verify DistrictDanger(D) = Norm(0.40 * max_A + 0.40 * avg_A + 0.20 * CorridorPenalty)
+        for d in results["districts"]:
+            for m in ["all", "yellow", "orange", "red"]:
+                expected_danger = round(min(100.0, max(0.0,
+                    0.40 * d["max_target_prob"][m] +
+                    0.40 * d["avg_target_prob"][m] +
+                    0.20 * d["corridor_penalty_by_mode"][m]
+                )), 1)
+                self.assertAlmostEqual(d["exposure_by_mode"][m], expected_danger, delta=0.1)
+                self.assertAlmostEqual(d["safety_by_mode"][m], round(100.0 - expected_danger, 1), delta=0.1)
+
+        # Verify Solomyanskyi is safest district (#1) and rank ordering is monotonic
+        self.assertEqual(results["districts"][0]["district"], "Солом'янський")
+        self.assertEqual(results["districts"][0]["safety_rank"], 1)
+        for i in range(len(results["districts"]) - 1):
+            d1 = results["districts"][i]
+            d2 = results["districts"][i + 1]
+            self.assertGreaterEqual(d1["safety_score"], d2["safety_score"], "Districts must be ranked by descending safety")
+            self.assertLessEqual(d1["exposure_index"], d2["exposure_index"], "Districts must be ranked by ascending danger")
+
+        # Robustness & Edge Cases: missing fields, None values, unknown category
+        edge_empty = engine.calculate_target_probability({}, 50.45, 30.52, mode="all")
+        self.assertGreaterEqual(edge_empty["score"], 0.0)
+        self.assertLessEqual(edge_empty["score"], 100.0)
+        self.assertIn(edge_empty["tactical_status"], ["Критична ціль", "Високий пріоритет", "Підвищена увага", "Помірний ризик"])
+
+        edge_none_props = engine.calculate_target_probability(None, 50.45, 30.52, mode="all")
+        self.assertGreaterEqual(edge_none_props["score"], 0.0)
+        self.assertLessEqual(edge_none_props["score"], 100.0)
+
+        edge_none_coords = engine.calculate_target_probability({"category": "bridges"}, None, None, mode="all")
+        self.assertGreaterEqual(edge_none_coords["score"], 0.0)
+        self.assertLessEqual(edge_none_coords["score"], 100.0)
+
+        # Horizon monotonicity validation across all ranges
+        self.assertLessEqual(edge_empty["horizons"]["24h"], edge_empty["horizons"]["7d"])
+        self.assertLessEqual(edge_empty["horizons"]["7d"], edge_empty["horizons"]["30d"])
+
+        edge_none = engine.calculate_target_probability({
+            "category": None, "vuln_yellow": None, "vuln_red": None, "criticality_index": None, "area_sqm": None
+        }, 50.45, 30.52, mode="yellow")
+        self.assertGreaterEqual(edge_none["score"], 0.0)
+        self.assertLessEqual(edge_none["score"], 100.0)
+        self.assertLessEqual(edge_none["horizons"]["24h"], edge_none["horizons"]["7d"])
+        self.assertLessEqual(edge_none["horizons"]["7d"], edge_none["horizons"]["30d"])
+
+        edge_unknown = engine.calculate_target_probability({"category": "unmapped_experimental_hub"}, 50.45, 30.52, mode="red")
+        self.assertGreaterEqual(edge_unknown["score"], 0.0)
+        self.assertLessEqual(edge_unknown["score"], 100.0)
+
+        # Non-finite and extreme coordinates
+        edge_inf = engine.calculate_target_probability({}, float("inf"), float("inf"), mode="all")
+        self.assertGreaterEqual(edge_inf["score"], 0.0)
+        self.assertLessEqual(edge_inf["score"], 100.0)
+
+        edge_neginf = engine.calculate_target_probability({}, float("-inf"), float("-inf"), mode="yellow")
+        self.assertGreaterEqual(edge_neginf["score"], 0.0)
+        self.assertLessEqual(edge_neginf["score"], 100.0)
+
+        edge_nan = engine.calculate_target_probability({}, float("nan"), float("nan"), mode="red")
+        self.assertGreaterEqual(edge_nan["score"], 0.0)
+        self.assertLessEqual(edge_nan["score"], 100.0)
+
+        # Defensive tactical status inputs
+        self.assertEqual(get_target_tactical_status(None), ("Помірний ризик", "#16a34a"))
+        self.assertEqual(get_target_tactical_status("85"), ("Критична ціль", "#dc2626"))
+        self.assertEqual(get_target_tactical_status("invalid"), ("Помірний ризик", "#16a34a"))
+        self.assertEqual(get_target_tactical_status(float("nan")), ("Помірний ризик", "#16a34a"))
+
+        # Defensive incident proximity score inputs
+        self.assertEqual(engine.calculate_incident_proximity_score(float("inf"), float("inf")), 0.0)
 
         self.assertIn("authoritative_sources", results)
         self.assertIn("historical_target_analysis", results)
@@ -313,6 +411,14 @@ class TestKyivDefensePipeline(unittest.TestCase):
         # Distance between Kyiv Independence Square (50.4501, 30.5234) and Kyiv TV Tower (50.4714, 30.4533) ~5.4 km
         d = haversine_distance_km(50.4501, 30.5234, 50.4714, 30.4533)
         self.assertAlmostEqual(d, 5.4, delta=0.5)
+
+        # Robustness against non-finite or None coordinates
+        self.assertEqual(haversine_distance_km(float("inf"), 30.0, 50.0, 30.0), 9999.0)
+        self.assertEqual(haversine_distance_km(None, 30.0, 50.0, 30.0), 9999.0)
+
+        from src.risk_engine import point_to_segment_distance_km
+        self.assertEqual(point_to_segment_distance_km(50.0, 30.0, None, [50.0, 30.0]), 9999.0)
+        self.assertEqual(point_to_segment_distance_km(float("inf"), 30.0, [50.0, 30.0], [50.1, 30.1]), 9999.0)
 
     # --- 3. Time Series Analytics Tests ---
     def test_time_series_leak_free_evaluation(self):
@@ -364,7 +470,7 @@ class TestKyivDefensePipeline(unittest.TestCase):
         # Verify elimination of incident pin layers completely from map
         self.assertNotIn("incidentsLayerGroup", content, "incidentsLayerGroup must be completely removed")
         self.assertIn("tab-priority-targets", content, "Priority targets tab must be present")
-        self.assertIn("Пріоритетні цілі & Прогноз", content, "Priority targets label must be present")
+        self.assertIn("Пріоритетні цілі & Привабливість для ворога", content, "Priority targets label must be present")
         self.assertIn("P_Target", content)
 
         # Authoritative data sources formalization in UI
@@ -382,11 +488,24 @@ class TestKyivDefensePipeline(unittest.TestCase):
         self.assertIn('data-cat="civilian_hub"', content)
         self.assertIn('data-cat="transport"', content)
 
+        # Tactical Statuses in Map Legend
+        self.assertIn("map-legend", content)
+        self.assertIn("80-100: Критична ціль", content)
+        self.assertIn("65-79: Високий пріоритет", content)
+        self.assertIn("50-64: Підвищена увага", content)
+        self.assertIn("&lt;50: Помірний ризик", content)
+
+        # District Popup Factor Breakdown
+        self.assertIn("Фактори небезпеки:</b> Макс A", content)
+        self.assertIn("Сер. A", content)
+        self.assertIn("Коридор:", content)
+
         # Responsive styling for mobile viewports (<768px, <480px, <360px)
         self.assertIn("@media (max-width: 768px)", content)
         self.assertIn("@media (max-width: 480px)", content)
         self.assertIn("@media (max-width: 360px)", content)
         self.assertIn("getDistrictStatusInfo", content)
+        self.assertIn("getDistrictColor", content)
 
         # Ensure obsolete Dark Map tile is completely absent
         self.assertNotIn("cartocdn", content.lower(), "CartoDB / Dark map tiles should be eliminated")
@@ -412,10 +531,17 @@ class TestKyivDefensePipeline(unittest.TestCase):
         # Structured concise popup fields for critical target facilities
         self.assertIn("<b>Район:</b>", content)
         self.assertIn("<b>Категорія:</b>", content)
-        self.assertIn("<b>Ймовірність ураження:</b>", content)
-        self.assertIn("<b>Пріоритетність цілі:</b>", content)
+        self.assertIn("<b>Індекс небезпеки:</b>", content)
+        self.assertIn("<b>Стратегічна критичність:</b>", content)
+        self.assertIn("<b>Доктринальний інтерес:</b>", content)
         self.assertIn("<b>Захист ППО:</b>", content)
         self.assertIn("<b>Опис об'єкта:</b>", content)
+
+        # Complete absence of obsolete stochastic terminology
+        content_lower = content.lower()
+        self.assertNotIn("ймовірність влучання", content_lower)
+        self.assertNotIn("шанс ураження", content_lower)
+        self.assertNotIn("ймовірність ураження", content_lower)
 
         # Ensure no repetitive location strings like "Дарницький, Дарницький"
         self.assertNotIn("Дарницький, Дарницький", content)
@@ -448,9 +574,10 @@ class TestKyivDefensePipeline(unittest.TestCase):
         self.assertNotIn("Оболонський район, Оболонь,", content)
 
     def test_index_html_no_js_syntax_quote_errors(self):
-        """Verify index.html contains no unescaped single quotes breaking JS string literals."""
+        """Verify index.html contains no unescaped single quotes breaking JS string literals and runs without syntax errors."""
         content = self.index_path.read_text(encoding="utf-8")
         import re
+        import subprocess
         scripts = re.findall(r'<script.*?>([\s\S]*?)</script>', content, re.IGNORECASE)
         for s in scripts:
             for line in s.split('\n'):
@@ -458,6 +585,79 @@ class TestKyivDefensePipeline(unittest.TestCase):
                 if trimmed.startswith("container.innerHTML = '") and trimmed.endswith("';"):
                     inner = trimmed[len("container.innerHTML = '"):-2]
                     self.assertNotIn("'", inner, f"Broken unescaped single quote found in: {line}")
+
+        # Headless JavaScriptCore runtime check on macOS
+        jsc_path = Path("/System/Library/Frameworks/JavaScriptCore.framework/Versions/Current/Helpers/jsc")
+        if jsc_path.exists():
+            combined_js = "\n".join(s for s in scripts if s.strip())
+            harness = """
+var window = this;
+var document = {
+    getElementById: function(id) {
+        return {
+            id: id, innerHTML: "", appendChild: function(){},
+            querySelectorAll: function(){ return []; },
+            classList: { toggle: function(){}, add: function(){}, remove: function(){} },
+            dataset: {}, style: {}
+        };
+    },
+    querySelectorAll: function() { return []; },
+    createElement: function() { return { style: {}, classList: { toggle: function(){} }, appendChild: function(){} }; }
+};
+function LayerGroupMock() {
+    this.clearLayers = function(){};
+    this.addLayer = function(){};
+    this.addTo = function(m){ return this; };
+}
+var L = {
+    map: function() { return { setView: function(){ return this; }, on: function(){}, flyTo: function(){} }; },
+    control: { zoom: function() { return { addTo: function(){} }; } },
+    tileLayer: function() { return { addTo: function(){} }; },
+    circle: function() { return { addTo: function(){} }; },
+    circleMarker: function() { return { addTo: function(){} }; },
+    polyline: function() { return { addTo: function(){}, bindPopup: function(){}, bindTooltip: function(){} }; },
+    marker: function() { return { addTo: function(){}, on: function(){}, bindPopup: function(){} }; },
+    divIcon: function() { return {}; },
+    layerGroup: function() { return new LayerGroupMock(); },
+    geoJSON: function(data, opts) {
+        if (opts && opts.onEachFeature && data && data.features) {
+            data.features.forEach(function(feat) {
+                var layer = { on: function(){}, setStyle: function(){}, bindPopup: function(){} };
+                opts.onEachFeature(feat, layer);
+            });
+        }
+        return { addTo: function(){} };
+    }
+};
+var navigator = { clipboard: { writeText: function(){} } };
+var console = { log: function(){}, warn: function(){}, error: function(){} };
+""" + combined_js + """
+setTimeRange("24h");
+setTimeRange("30d");
+setTimeRange("7d");
+setThreatMode("yellow");
+setThreatMode("red");
+setThreatMode("all");
+toggleCategoryFilter("energy");
+toggleCategoryFilter("energy");
+renderDistrictsList();
+renderObjectsList();
+renderPriorityTargetsList();
+if (typeof getDistrictColor !== "function") throw new Error("getDistrictColor missing");
+if (getDistrictColor(75) !== "#dc2626") throw new Error("District 75 should be #dc2626");
+if (getDistrictColor(65) !== "#ea580c") throw new Error("District 65 should be #ea580c");
+if (getDistrictColor(55) !== "#eab308") throw new Error("District 55 should be #eab308");
+if (getDistrictColor(45) !== "#10b981") throw new Error("District 45 should be #10b981");
+setTimeRange("24h");
+setThreatMode("red");
+RISK_DATA.districts.forEach(function(d) {
+    if (d.danger_index === undefined) throw new Error("danger_index missing in district: " + d.district);
+    if (d.corridor_penalty === undefined) throw new Error("corridor_penalty missing in district: " + d.district);
+    if (d.safety_rank + d.threat_rank !== 11) throw new Error("Rank sum != 11 for " + d.district);
+});
+"""
+            res = subprocess.run([str(jsc_path), "-e", harness], capture_output=True, text=True)
+            self.assertEqual(res.returncode, 0, f"JSC runtime error: {res.stdout} {res.stderr}")
 
 
 if __name__ == "__main__":
