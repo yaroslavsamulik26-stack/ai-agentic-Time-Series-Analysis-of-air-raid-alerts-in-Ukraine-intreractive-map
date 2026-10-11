@@ -604,6 +604,11 @@ def generate_infrastructure_geojson():
 
 
 def generate_districts_geojson():
+    out_path = CURATED_DIR / "kyiv_districts.geojson"
+    if out_path.exists() and out_path.stat().st_size > 10000:
+        print(f"Preserving existing official seamless boundaries at {out_path} ({out_path.stat().st_size} bytes)")
+        return
+
     features = []
     for d in DISTRICTS_DATA:
         poly_coords = d["polygon"]
@@ -621,7 +626,6 @@ def generate_districts_geojson():
         features.append(feat)
 
     geojson = {"type": "FeatureCollection", "features": features}
-    out_path = CURATED_DIR / "kyiv_districts.geojson"
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(geojson, f, ensure_ascii=False, indent=2)
     print(f"Generated {out_path} ({len(features)} realistic districts)")

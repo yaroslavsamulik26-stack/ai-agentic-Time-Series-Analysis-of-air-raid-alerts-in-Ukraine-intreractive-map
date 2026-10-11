@@ -26,17 +26,19 @@ This project combines **leak-free Time Series forecasting** of alert hazard prob
    - All features at time $T$ (historical alert density, time elapsed since previous raid, cyclical harmonic diurnal phases) are strictly backward-looking.
    - Outperforms baseline empirical frequency: **ROC-AUC: 0.681** (vs Baseline: 0.647), **Brier Score: 0.217**.
 2. **Multi-Factor Facility Risk Scoring ($0–100$):**
-   - Real-time risk index for 22+ critical Kyiv infrastructure facilities across energy, transport, administration, and defense manufacturing.
-   - Incorporates spatial proximity decay to confirmed strike/debris points over the past 3 months.
-3. **District Safety Leaderboard:**
-   - Evaluates and ranks all 10 administrative districts of Kyiv (from safest to most exposed).
-4. **Interactive Standalone Web Map (`index.html`):**
-   - Built on Leaflet with Google Maps Roadmap, Google Satellite, and Tactical Dark canvas tiles.
-   - Dynamic mode switcher: Yellow Threat, Red Threat, and All Threats.
-   - Facility category filters and popups with vulnerability diagnostics.
-   - Runs out-of-the-box in any browser and is 100% compatible with GitHub Pages.
+   - Real-time risk index for 35+ critical Kyiv infrastructure facilities across energy (TECs, substations), transport (bridges, railway hubs), administration, and defense manufacturing.
+   - Incorporates spatial kernel proximity decay to confirmed strike/debris points over the past 3 months.
+3. **Calibrated District Hazard Index & Gapless 10-District Coverage:**
+   - 100% seamless, contiguous OpenStreetMap administrative polygons for all 10 Kyiv districts (Right and Left banks) with zero unpartitioned gaps.
+   - Logarithmically calibrated risk scoring reflecting actual strike distribution (from quietest districts with 9-13 strikes to most targeted central sectors with 260+ events).
+4. **Interactive Standalone Web Dashboard (`index.html`):**
+   - Built on Leaflet with Google Maps Roadmap and Google Satellite tiles.
+   - Compact, closable, and draggable control headers.
+   - Interactive incident time-range selector defaulting to the last 7 days (`7 днів`, `30 днів`, `Всі (3 міс)`).
+   - Dynamic threat toggler: Yellow Threat (Shahed/drones), Red Threat (missiles/ballistics), and Combined.
+   - Runs out-of-the-box in any browser with zero API keys or external server dependencies.
 5. **Universal Multi-Source Ingestion (`src/parser.py`):**
-   - Supports Telegram Desktop JSON exports (`result.json`), Perplexity/NotebookLM OSINT CSV dumps, and official alerts archives.
+   - Supports Telegram Desktop JSON exports (`result.json`), NotebookLM/Perplexity OSINT text and Markdown dumps, and official alerts archives.
 
 ---
 

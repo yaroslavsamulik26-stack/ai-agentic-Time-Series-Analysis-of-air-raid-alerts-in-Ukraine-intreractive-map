@@ -747,10 +747,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <!-- Legend Overlay -->
     <div class="map-legend">
         <div style="font-weight:700; margin-bottom:2px; color:#cbd5e1;">Рівень небезпеки:</div>
-        <div class="legend-item"><div class="legend-color" style="background:#dc2626;"></div> 80-100: Критичний ризик</div>
-        <div class="legend-item"><div class="legend-color" style="background:#ea580c;"></div> 65-79: Високий ризик</div>
-        <div class="legend-item"><div class="legend-color" style="background:#eab308;"></div> 50-64: Підвищений ризик</div>
-        <div class="legend-item"><div class="legend-color" style="background:#10b981;"></div> 0-49: Помірний ризик</div>
+        <div class="legend-item"><div class="legend-color" style="background:#dc2626;"></div> 75-100: Критичний ризик</div>
+        <div class="legend-item"><div class="legend-color" style="background:#ea580c;"></div> 60-74: Високий ризик</div>
+        <div class="legend-item"><div class="legend-color" style="background:#eab308;"></div> 45-59: Підвищений ризик</div>
+        <div class="legend-item"><div class="legend-color" style="background:#10b981;"></div> 0-44: Відносно помірний ризик</div>
         <div style="margin-top:4px; border-top:1px solid rgba(255,255,255,0.1); padding-top:4px;">
             <i class="fa-solid fa-location-crosshairs" style="color:#f43f5e"></i> Уламки / прильоти (3 міс)
         </div>
@@ -896,9 +896,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         let incidentsLayerGroup = L.layerGroup().addTo(map);
 
         function getScoreColor(score) {
-            if (score >= 80) return '#dc2626'; // Red / Critical
-            if (score >= 65) return '#ea580c'; // Orange / High
-            if (score >= 50) return '#eab308'; // Yellow / Moderate-High
+            if (score >= 75) return '#dc2626'; // Red / Critical
+            if (score >= 60) return '#ea580c'; // Orange / High
+            if (score >= 45) return '#eab308'; // Yellow / Moderate-High
             return '#10b981'; // Green / Moderate
         }
 

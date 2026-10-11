@@ -206,38 +206,58 @@ class KyivRiskEngine:
                 data["avg_yellow_score"] = 45.0
                 data["avg_red_score"] = 45.0
 
-            # Non-linear high-contrast district exposure formula
-            # Base wartime threat floor: 22 pts
-            # Incident exposure: up to 45 pts (scales strongly with confirmed hits/debris)
-            # Facility vulnerability exposure: up to 25 pts
-            inc_pts = min(45.0, data["incidents_count"] * 11.5)
-            facility_pts = ((data["avg_yellow_score"] + data["avg_red_score"]) / 2.0) * 0.28
-            
-            # Corridor bonuses:
-            corridor_bonus = 0.0
-            if d in ["Оболонський", "Дарницький", "Деснянський"]:
-                corridor_bonus += 8.0  # Primary drone ingress corridors
-            if d in ["Шевченківський", "Солом'янський", "Печерський"]:
-                corridor_bonus += 10.0 # High-density ballistic/missile target clusters
+            # High-contrast relative incident scaling based on actual strikes/debris
+            # Prevents artificial score saturation and provides clear visual/risk contrast
+            all_incident_counts = [d_info["incidents_count"] for d_info in district_stats.values()]
+            min_c = min(all_incident_counts) if all_incident_counts else 0
+            max_c = max(all_incident_counts) if all_incident_counts else 1
 
-            exposure_index = round(min(96.0, 22.0 + inc_pts + facility_pts + corridor_bonus), 1)
+            if max_c > min_c:
+                # Logarithmic normalization handles heavy-tailed strike counts (e.g. 262 vs 56 vs 9)
+                norm_inc = (math.log(1 + data["incidents_count"]) - math.log(1 + min_c)) / (
+                    math.log(1 + max_c) - math.log(1 + min_c)
+                )
+            else:
+                norm_inc = 0.5
+
+            # Incident intensity points: 0 to 48 pts
+            inc_pts = norm_inc * 48.0
+
+            # Strategic Infrastructure & target density bonus: up to 18 pts
+            infra_weights = {
+                "Шевченківський": 16.0,  # ДАХК «Артем», ДержККБ «Луч», Охматдит, Телевежа, КМДА
+                "Оболонський": 16.5,     # Київська ГЕС/дамба, ПС «Північна», Північний міст, «Маяк»
+                "Голосіївський": 17.0,   # ТЕЦ-5, ПС «Новокиївська», нафтобаза Корчувате
+                "Дарницький": 15.0,      # ПС «Позняки», Дарницький вокзал, нафтохаб Бортничі, Південний міст
+                "Подільський": 11.0,     # ПС «Північна», Куренівська промзона, Фармак
+                "Святошинський": 10.0,   # ДП «Антонов» (Святошинський авіакомплекс)
+                "Солом'янський": 11.5,   # Вокзал, аеропорт Жуляни, МОУ / Генштаб
+                "Деснянський": 8.0,      # ТЕЦ-6, Деснянська водопровідна станція
+                "Дніпровський": 5.0,     # Дарницька ТЕЦ, депо «Дарниця»
+                "Печерський": 5.0,       # Урядовий квартал (високий ешелон захисту Patriot/ППО)
+            }
+            infra_pts = infra_weights.get(d, 8.0)
+
+            # Base wartime threat floor: 25.0 pts (any district in Kyiv has background risk during air alarms)
+            raw_exposure = 25.0 + inc_pts + infra_pts
+            exposure_index = round(min(95.0, max(20.0, raw_exposure)), 1)
             data["exposure_index"] = exposure_index
 
             # Safety score (100 - exposure) reflects residual safety margin
-            data["safety_score"] = round(max(4.0, 100.0 - exposure_index), 1)
+            data["safety_score"] = round(max(5.0, 100.0 - exposure_index), 1)
 
-            # Strict realistic defense tiers
-            if exposure_index >= 80:
-                data["status"] = "КРИТИЧНА ЗАГРОЗА (висока концентрація ударів/уламків)"
+            # Strict realistic defense tiers with distinctive visual separation
+            if exposure_index >= 75:
+                data["status"] = "КРИТИЧНИЙ РИЗИК (масовані удари, пріоритетні оборонні цілі)"
                 data["badge_color"] = "#dc2626"
-            elif exposure_index >= 65:
-                data["status"] = "ВИСОКИЙ РИЗИК (траєкторії атак, ураження інфраструктури)"
+            elif exposure_index >= 60:
+                data["status"] = "ВИСОКИЙ РИЗИК (коридори дронів, ТЕЦ / стратегічні підстанції)"
                 data["badge_color"] = "#ea580c"
-            elif exposure_index >= 50:
-                data["status"] = "ПІДВИЩЕНИЙ РИЗИК (загроза перехоплень ППО)"
+            elif exposure_index >= 45:
+                data["status"] = "ПІДВИЩЕНИЙ РИЗИК (падіння уламків збиттів, вузловий транспорт)"
                 data["badge_color"] = "#eab308"
             else:
-                data["status"] = "ВІДНОСНО ПОМІРНИЙ РИЗИК (менша щільність цілей)"
+                data["status"] = "ВІДНОСНО ПОМІРНИЙ РИЗИК (мінімальна кількість влучань/уламків)"
                 data["badge_color"] = "#10b981"
 
             results.append(data)
