@@ -1345,7 +1345,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             switch(cat) {
                 case 'energy': return 'Енергетика';
                 case 'transport': return 'Мости / Транспорт';
-                case 'admin': return 'Влада / Зв\'язок';
+                case 'admin': return "Влада / Зв'язок";
                 case 'industry': return 'ВПК / Промисловість';
                 case 'defense': return 'Ешелони ППО & Турелі';
                 default: return 'Інфраструктура';
