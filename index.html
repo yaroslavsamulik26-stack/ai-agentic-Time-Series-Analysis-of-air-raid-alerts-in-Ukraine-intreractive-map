@@ -84,13 +84,40 @@
             white-space: nowrap;
         }
 
-        /* Threat Mode Selector - Small Icons */
-        .threat-modes {
+        /* Threat Mode & Time Range Selectors - Small Icons */
+        .threat-modes, .time-range-modes {
             display: flex;
-            gap: 4px;
+            gap: 3px;
             background: rgba(0, 0, 0, 0.4);
             padding: 3px;
             border-radius: 8px;
+        }
+
+        .time-btn {
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            padding: 4px 8px;
+            font-size: 11px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            white-space: nowrap;
+        }
+
+        .time-btn:hover {
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .time-btn.active {
+            background: #0284c7;
+            color: #ffffff;
+            box-shadow: 0 0 8px rgba(2, 132, 199, 0.5);
         }
 
         .mode-btn {
@@ -593,6 +620,19 @@
             </button>
         </div>
 
+        <!-- Time Range Selector (7 days default) -->
+        <div class="time-range-modes">
+            <button class="time-btn active" data-range="7d" onclick="setTimeRange('7d')" title="Показати удари за останні 7 днів">
+                <i class="fa-solid fa-clock-rotate-left"></i> 7 днів
+            </button>
+            <button class="time-btn" data-range="30d" onclick="setTimeRange('30d')" title="Показати удари за 30 днів">
+                30 днів
+            </button>
+            <button class="time-btn" data-range="all" onclick="setTimeRange('all')" title="Показати всі зафіксовані удари">
+                Всі (3 міс)
+            </button>
+        </div>
+
         <button class="btn-action-small" onclick="openAnalyticsModal()">
             <i class="fa-solid fa-chart-line"></i> Time Series
         </button>
@@ -662,7 +702,7 @@
             <!-- Tab 3: Incidents Log -->
             <div id="tab-incidents" class="tab-pane">
                 <div class="filter-section">
-                    <div class="section-title"><i class="fa-solid fa-fire"></i> Зафіксовані уламки та удари за 3 міс</div>
+                    <div class="section-title" id="incidents-tab-title"><i class="fa-solid fa-fire"></i> Зафіксовані удари (7 днів)</div>
                     <div id="incidents-list">
                         <!-- Rendered by JS -->
                     </div>
@@ -761,7 +801,34 @@
 
         // State
         let currentThreatMode = 'all'; // 'all', 'yellow', 'red'
+        let currentTimeRange = '7d';   // Default to last 7 days!
         let activeCategories = new Set(['energy', 'transport', 'admin', 'industry']);
+
+        function getCutoffDate(rangeKey) {
+            if (rangeKey === 'all') return null;
+            let maxTs = 0;
+            INCIDENTS_DATA.forEach(inc => {
+                let parsed = Date.parse(inc.datetime.replace(' ', 'T'));
+                if (!isNaN(parsed) && parsed > maxTs) maxTs = parsed;
+            });
+            if (maxTs === 0) maxTs = Date.now();
+
+            if (rangeKey === '7d') {
+                return maxTs - (7 * 24 * 60 * 60 * 1000);
+            } else if (rangeKey === '30d') {
+                return maxTs - (30 * 24 * 60 * 60 * 1000);
+            }
+            return null;
+        }
+
+        function setTimeRange(rangeKey) {
+            currentTimeRange = rangeKey;
+            document.querySelectorAll('.time-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.range === rangeKey);
+            });
+            renderIncidents();
+            renderIncidentsList();
+        }
 
         // Initialize Map
         const map = L.map('map', {
@@ -929,19 +996,27 @@
             });
         }
 
-        // 3. Render Incidents
+        // 3. Render Incidents (with 7-day default filter)
         function renderIncidents() {
             incidentsLayerGroup.clearLayers();
+            const cutoff = getCutoffDate(currentTimeRange);
+            let count = 0;
 
             INCIDENTS_DATA.forEach(inc => {
                 if (currentThreatMode === 'yellow' && inc.alert_level !== 'yellow') return;
                 if (currentThreatMode === 'red' && inc.alert_level !== 'red') return;
 
+                if (cutoff) {
+                    let parsed = Date.parse(inc.datetime.replace(' ', 'T'));
+                    if (!isNaN(parsed) && parsed < cutoff) return;
+                }
+                count++;
+
                 const isDrone = inc.threat_type === 'drone_shahed';
                 const incColor = isDrone ? '#f59e0b' : '#f43f5e';
 
                 const incidentIcon = L.divIcon({
-                    html: `<div style="background:${incColor}; width:14px; height:14px; border-radius:50%; border:2px solid #ffffff; box-shadow:0 0 6px ${incColor};"></div>`,
+                    html: `<div style="background:${incColor}; width:13px; height:13px; border-radius:50%; border:2px solid #ffffff; box-shadow:0 0 6px ${incColor};"></div>`,
                     className: '',
                     iconSize: [14, 14],
                     iconAnchor: [7, 7]
@@ -961,6 +1036,12 @@
                 marker.bindPopup(popup);
                 incidentsLayerGroup.addLayer(marker);
             });
+
+            const titleEl = document.getElementById('incidents-tab-title');
+            if (titleEl) {
+                const rangeLabel = currentTimeRange === '7d' ? 'за 7 днів' : (currentTimeRange === '30d' ? 'за 30 днів' : 'за весь час');
+                titleEl.innerHTML = `<i class="fa-solid fa-fire"></i> Зафіксовані удари (${count} подій, ${rangeLabel})`;
+            }
         }
 
         // Mode Toggler
@@ -973,6 +1054,7 @@
             renderObjects();
             renderIncidents();
             renderObjectsList();
+            renderIncidentsList();
         }
 
         // Category Filter
@@ -1054,7 +1136,20 @@
         function renderIncidentsList() {
             const container = document.getElementById('incidents-list');
             container.innerHTML = '';
+            const cutoff = getCutoffDate(currentTimeRange);
+            let displayCount = 0;
+
             INCIDENTS_DATA.forEach(inc => {
+                if (currentThreatMode === 'yellow' && inc.alert_level !== 'yellow') return;
+                if (currentThreatMode === 'red' && inc.alert_level !== 'red') return;
+
+                if (cutoff) {
+                    let parsed = Date.parse(inc.datetime.replace(' ', 'T'));
+                    if (!isNaN(parsed) && parsed < cutoff) return;
+                }
+                displayCount++;
+                if (displayCount > 60) return; // keep side list responsive
+
                 const card = document.createElement('div');
                 card.className = 'stat-card';
                 card.onclick = () => map.flyTo([inc.lat, inc.lon], 15);
@@ -1069,6 +1164,10 @@
                 `;
                 container.appendChild(card);
             });
+
+            if (displayCount === 0) {
+                container.innerHTML = '<div style="font-size:11px; color:#94a3b8; padding:10px; text-align:center;">За обраний період подій не зафіксовано.</div>';
+            }
         }
 
         // Modal
