@@ -1500,6 +1500,22 @@
             }
         }
 
+        function getCategoryColor(cat) {
+            switch(cat) {
+                case 'bridges': return '#38bdf8';      // Мости через Дніпро (Sky Blue)
+                case 'metro': return '#22c55e';        // Київський Метрополітен (Green)
+                case 'energy': return '#eab308';       // Енергетика (Gold-Yellow)
+                case 'fuel': return '#f97316';         // Паливо / ПММ (Orange)
+                case 'water': return '#06b6d4';        // Водоканал (Cyan)
+                case 'industry': return '#f43f5e';     // ВПК / Промисловість (Rose-Red)
+                case 'civilian_hub': return '#ec4899'; // ТРЦ / Цивільні хаби (Pink)
+                case 'admin': return '#a855f7';        // Влада / Зв'язок (Purple)
+                case 'transport': return '#94a3b8';    // Транспортні вокзали (Slate Gray)
+                case 'defense': return '#10b981';      // Ешелони ППО (Teal Green)
+                default: return '#3b82f6';
+            }
+        }
+
         const districtLayerMap = {};
 
         // 1. Render All 10 Kyiv Districts Polygons (Dynamically reacting to active threat mode)
@@ -1600,7 +1616,8 @@
                 const scoreObj = obj.scores[currentThreatMode] || obj.scores['all'];
                 const score = scoreObj.score;
                 const tier = scoreObj.tier || 'Середній';
-                const color = isDefense ? '#10b981' : getScoreColor(score);
+                const color = isDefense ? '#10b981' : getCategoryColor(obj.category);
+                const scoreColor = isDefense ? '#10b981' : getScoreColor(score);
 
                 if (isDefense) {
                     const defenseCircle = L.circle([obj.lat, obj.lon], {
@@ -1645,7 +1662,7 @@
                 const scoreLabel = isDefense ? 'Індекс активності ППО:' : 'Ймовірність удару P<sub>Target</sub>:';
                 const statusLabel = isDefense ?
                     `Статус: <b style="color:#10b981;">Активний сектор перехоплення</b>` :
-                    `Статус: <b style="color:${color};">${tier}</b> | Захист ППО: -${scoreObj.air_defense_pct || 0}%`;
+                    `Статус: <b style="color:${scoreColor};">${tier}</b> | Захист ППО: -${scoreObj.air_defense_pct || 0}%`;
 
                 const cwText = scoreObj.category_weight !== undefined ? `${scoreObj.category_weight} б.` : '—';
                 const critText = scoreObj.criticality !== undefined ? `${scoreObj.criticality} б.` : '—';
@@ -1683,10 +1700,10 @@
 
                 const popupContent = `
                     <div class="popup-title">${obj.name}</div>
-                    <div class="popup-cat"><i class="fa-solid ${getCategoryIcon(obj.category)}"></i> ${formatCategoryUA(obj.category)} • ${obj.district}</div>
+                    <div class="popup-cat" style="color:${color}; font-weight:600;"><i class="fa-solid ${getCategoryIcon(obj.category)}"></i> ${formatCategoryUA(obj.category)} • ${obj.district}</div>
                     <div class="popup-score-box">
                         <span style="font-size:11px; color:#cbd5e1;">${scoreLabel}</span>
-                        <span class="popup-score-num" style="color:${color};">${score}%</span>
+                        <span class="popup-score-num" style="color:${scoreColor};">${score}%</span>
                     </div>
                     <div style="font-size:10px; margin-bottom:6px; color:#94a3b8;">
                         ${statusLabel}
@@ -1901,7 +1918,8 @@
                 const isDefense = obj.category === 'defense';
                 const scoreObj = obj.scores[currentThreatMode] || obj.scores['all'];
                 const score = scoreObj.score;
-                const color = isDefense ? '#10b981' : getScoreColor(score);
+                const catColor = isDefense ? '#10b981' : getCategoryColor(obj.category);
+                const scoreColor = isDefense ? '#10b981' : getScoreColor(score);
                 const card = document.createElement('div');
                 card.className = 'stat-card';
                 card.onclick = () => {
@@ -1910,10 +1928,10 @@
                 };
                 card.innerHTML = `
                     <div class="district-info">
-                        <h4>${obj.name}</h4>
-                        <p>${obj.district} • ${formatCategoryUA(obj.category)}</p>
+                        <h4><i class="fa-solid ${getCategoryIcon(obj.category)}" style="color:${catColor}; font-size:12px; margin-right:5px;"></i>${obj.name}</h4>
+                        <p>${obj.district} • <span style="color:${catColor}; font-weight:600;">${formatCategoryUA(obj.category)}</span></p>
                     </div>
-                    <div class="score-pill" style="background:${color}33; color:${color}; border:1px solid ${color};">
+                    <div class="score-pill" style="background:${scoreColor}33; color:${scoreColor}; border:1px solid ${scoreColor}; font-weight:700;">
                         ${score}%
                     </div>
                 `;
@@ -1944,6 +1962,7 @@
                 const scoreObj = obj.scores[modeKey] || obj.scores['all'];
                 const prob = (scoreObj.p_target !== undefined) ? scoreObj.p_target : scoreObj.score;
                 const tier = scoreObj.tier || 'Середній';
+                const catColor = getCategoryColor(obj.category);
                 const color = getScoreColor(prob);
                 const cw = scoreObj.category_weight !== undefined ? scoreObj.category_weight : '—';
                 const prox = scoreObj.corridor_proximity !== undefined ? scoreObj.corridor_proximity : '—';
@@ -1957,8 +1976,8 @@
                 };
                 card.innerHTML = `
                     <div class="district-info">
-                        <h4>#${idx + 1} ${obj.name}</h4>
-                        <p>${obj.district} • <i class="fa-solid ${getCategoryIcon(obj.category)}"></i> ${formatCategoryUA(obj.category)}</p>
+                        <h4>#${idx + 1} <i class="fa-solid ${getCategoryIcon(obj.category)}" style="color:${catColor}; font-size:11px; margin-right:4px;"></i>${obj.name}</h4>
+                        <p>${obj.district} • <span style="color:${catColor}; font-weight:600;"><i class="fa-solid ${getCategoryIcon(obj.category)}"></i> ${formatCategoryUA(obj.category)}</span></p>
                         <div style="font-size:9.5px; color:#94a3b8; margin-top:2px;">
                             Ціль: <b>${cw}</b> б. | Вектор: <b>${prox}</b> б. | ППО: <b>-${adPct}%</b>
                         </div>
