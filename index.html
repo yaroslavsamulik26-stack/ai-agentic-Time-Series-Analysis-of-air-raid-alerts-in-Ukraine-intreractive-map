@@ -214,26 +214,78 @@
         /* Reopen floating button */
         .reopen-panel-btn {
             position: absolute;
-            top: 10px;
-            right: 10px;
-            z-index: 999;
-            background: var(--panel-bg);
+            top: 70px;
+            right: 12px;
+            z-index: 1100;
+            background: linear-gradient(135deg, #1e3a8a, #0284c7);
             backdrop-filter: blur(10px);
-            border: 1px solid var(--border-color);
+            border: 1px solid rgba(56, 189, 248, 0.4);
             color: #ffffff;
-            padding: 6px 12px;
+            padding: 8px 14px;
             border-radius: 8px;
             font-size: 12px;
-            font-weight: 600;
+            font-weight: 700;
             cursor: pointer;
             display: none;
             align-items: center;
             gap: 6px;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            transition: all 0.2s ease;
         }
 
         .reopen-panel-btn:hover {
-            background: rgba(30, 41, 59, 0.95);
+            background: linear-gradient(135deg, #2563eb, #0369a1);
+            transform: translateY(-1px);
+        }
+
+        .filter-action-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--border-color);
+            color: #cbd5e1;
+            font-size: 10px;
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .filter-action-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+        }
+
+        .search-input-box {
+            position: relative;
+            margin-bottom: 8px;
+        }
+
+        .search-input {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid var(--border-color);
+            color: #f8fafc;
+            padding: 6px 28px 6px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .search-input:focus {
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 6px rgba(56, 189, 248, 0.3);
+        }
+
+        .search-icon {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 11px;
+            pointer-events: none;
         }
 
         /* Side Panel - Draggable & Closable */
@@ -241,7 +293,7 @@
             position: absolute;
             top: 60px;
             right: 12px;
-            width: 360px;
+            width: min(370px, calc(100vw - 24px));
             max-height: calc(100vh - 80px);
             z-index: 1000;
             background: var(--panel-bg);
@@ -882,8 +934,14 @@
             <i class="fa-solid fa-chart-line"></i> Time Series
         </button>
 
+        <button class="btn-action-small active" id="toggleSidePanelBtn" onclick="toggleSidePanel()" title="Відкрити/закрити аналітичну панель безпеки">
+            <i class="fa-solid fa-chart-pie"></i> Панель безпеки
+        </button>
+
         <!-- Top Category Filters Row -->
         <div class="top-cat-filters" id="topCategoryFilters">
+            <button class="filter-action-btn" onclick="setAllCategories(true)" title="Увімкнути всі категорії">Всі</button>
+            <button class="filter-action-btn" onclick="setAllCategories(false)" title="Скинути всі категорії">Скинути</button>
             <div class="filter-chip active" data-cat="bridges" onclick="toggleCategoryFilter('bridges')" title="Фільтр: Мости через Дніпро та розв'язки">
                 <i class="fa-solid fa-bridge" style="color:#38bdf8"></i> Мости
             </div>
@@ -918,8 +976,8 @@
     </div>
 
     <!-- Reopen Floating Button (when panel is closed) -->
-    <button id="openSidePanelBtn" class="reopen-panel-btn" onclick="openSidePanel()">
-        <i class="fa-solid fa-chart-pie"></i> Панель розвідки
+    <button id="openSidePanelBtn" class="reopen-panel-btn" onclick="openSidePanel()" title="Відкрити аналітичну панель безпеки">
+        <i class="fa-solid fa-chart-pie"></i> Панель безпеки
     </button>
 
     <!-- Side Intelligence Panel - Draggable & Closable -->
@@ -991,6 +1049,10 @@
                 </div>
                 <div class="filter-section">
                     <div class="section-title"><i class="fa-solid fa-list-check"></i> Перелік об'єктів під моніторингом</div>
+                    <div class="search-input-box">
+                        <input type="text" class="search-input" id="objectsSearchInput" placeholder="Пошук за назвою або районом..." oninput="onSearchObjects(this.value)">
+                        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                    </div>
                     <div id="objects-list">
                         <!-- Rendered by JS -->
                     </div>
@@ -1004,6 +1066,10 @@
                     <p style="font-size:10px; color:var(--text-muted); margin-bottom:8px;">
                         Рейтинг уцілілих критичних об'єктів за прогнозованою ймовірністю удару P<sub>Target</sub> (Гібридна модель: Часовий ризик H &times; Стратегічний пріоритет &times; Захист ППО).
                     </p>
+                    <div class="search-input-box">
+                        <input type="text" class="search-input" id="targetsSearchInput" placeholder="Пошук цілі за назвою або районом..." oninput="onSearchTargets(this.value)">
+                        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                    </div>
                     <div id="priority-targets-list">
                         <!-- Rendered by JS -->
                     </div>
@@ -1868,15 +1934,56 @@
             if (pane) pane.classList.add('active');
         }
 
-        // Panel Close / Open
+        // Panel Close / Open / Toggle
+        let searchQueryObjects = '';
+        let searchQueryTargets = '';
+
+        function toggleSidePanel() {
+            const panel = document.getElementById('sidePanel');
+            if (panel.style.display === 'none') {
+                openSidePanel();
+            } else {
+                closeSidePanel();
+            }
+        }
+
         function closeSidePanel() {
             document.getElementById('sidePanel').style.display = 'none';
             document.getElementById('openSidePanelBtn').style.display = 'flex';
+            const btn = document.getElementById('toggleSidePanelBtn');
+            if (btn) btn.classList.remove('active');
         }
 
         function openSidePanel() {
             document.getElementById('sidePanel').style.display = 'flex';
             document.getElementById('openSidePanelBtn').style.display = 'none';
+            const btn = document.getElementById('toggleSidePanelBtn');
+            if (btn) btn.classList.add('active');
+        }
+
+        function setAllCategories(enableAll) {
+            const allCats = ['bridges', 'metro', 'energy', 'fuel', 'water', 'industry', 'civilian_hub', 'admin', 'transport', 'defense'];
+            if (enableAll) {
+                allCats.forEach(c => activeCategories.add(c));
+            } else {
+                activeCategories.clear();
+            }
+            document.querySelectorAll('#topCategoryFilters .filter-chip, .category-filters .filter-chip').forEach(chip => {
+                chip.classList.toggle('active', enableAll);
+            });
+            renderObjects();
+            renderObjectsList();
+            renderPriorityTargetsList();
+        }
+
+        function onSearchObjects(val) {
+            searchQueryObjects = (val || '').trim().toLowerCase();
+            renderObjectsList();
+        }
+
+        function onSearchTargets(val) {
+            searchQueryTargets = (val || '').trim().toLowerCase();
+            renderPriorityTargetsList();
         }
 
         function renderDistrictsList() {
@@ -1921,7 +2028,19 @@
         function renderObjectsList() {
             const container = document.getElementById('objects-list');
             container.innerHTML = '';
-            const filtered = RISK_DATA.objects.filter(o => activeCategories.has(o.category));
+            let filtered = RISK_DATA.objects.filter(o => activeCategories.has(o.category));
+            if (searchQueryObjects) {
+                filtered = filtered.filter(o =>
+                    o.name.toLowerCase().includes(searchQueryObjects) ||
+                    (o.district && o.district.toLowerCase().includes(searchQueryObjects))
+                );
+            }
+
+            if (filtered.length === 0) {
+                container.innerHTML = '<div style="font-size:11px; color:#94a3b8; padding:12px; text-align:center;"><i class="fa-solid fa-magnifying-glass"></i> Об'єктів за запитом не знайдено.</div>';
+                return;
+            }
+
             filtered.forEach(obj => {
                 const isDefense = obj.category === 'defense';
                 const scoreObj = obj.scores[currentThreatMode] || obj.scores['all'];
@@ -1954,7 +2073,14 @@
 
             const modeKey = (currentThreatMode === 'all') ? 'all' : currentThreatMode;
             // Rank non-defense intact facilities by predicted hit probability P_Target
-            const targets = RISK_DATA.objects.filter(o => o.category !== 'defense' && activeCategories.has(o.category));
+            let targets = RISK_DATA.objects.filter(o => o.category !== 'defense' && activeCategories.has(o.category));
+            if (searchQueryTargets) {
+                targets = targets.filter(o =>
+                    o.name.toLowerCase().includes(searchQueryTargets) ||
+                    (o.district && o.district.toLowerCase().includes(searchQueryTargets))
+                );
+            }
+
             targets.sort((a, b) => {
                 const probA = (a.scores[modeKey] && a.scores[modeKey].p_target !== undefined) ? a.scores[modeKey].p_target : (a.scores['all'].p_target || 0);
                 const probB = (b.scores[modeKey] && b.scores[modeKey].p_target !== undefined) ? b.scores[modeKey].p_target : (b.scores['all'].p_target || 0);
@@ -1962,7 +2088,7 @@
             });
 
             if (targets.length === 0) {
-                container.innerHTML = '<div style="font-size:11px; color:#94a3b8; padding:10px; text-align:center;">Немає цільових об’єктів у вибраних категоріях.</div>';
+                container.innerHTML = '<div style="font-size:11px; color:#94a3b8; padding:12px; text-align:center;"><i class="fa-solid fa-magnifying-glass"></i> Немає цільових об’єктів за запитом.</div>';
                 return;
             }
 
