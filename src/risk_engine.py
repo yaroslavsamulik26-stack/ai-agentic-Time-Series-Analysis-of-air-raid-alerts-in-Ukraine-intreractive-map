@@ -316,6 +316,13 @@ class KyivRiskEngine:
         raw_prob = kappa * h_val * strategic_score * mitigation_factor
         p_target = round(min(100.0, max(5.0, raw_prob)), 1)
 
+        # Precompute across tactical (24h), operational (7d), and strategic (30d) horizons
+        horizons_p = {}
+        for h_k, h_sub in time_hazards.items():
+            h_f = h_sub.get(mode, 0.85)
+            h_raw = kappa * h_f * strategic_score * mitigation_factor
+            horizons_p[h_k] = round(min(100.0, max(5.0, h_raw)), 1)
+
         def get_tier(p: float) -> str:
             if p >= 70.0:
                 return "Критичний"
@@ -329,6 +336,7 @@ class KyivRiskEngine:
             "p_target": p_target,
             "score": p_target,
             "tier": get_tier(p_target),
+            "horizons": horizons_p,
             "category_weight": round(cw, 1),
             "criticality": round(crit, 1),
             "corridor_proximity": round(corridor_prox, 1),
@@ -554,9 +562,9 @@ class KyivRiskEngine:
                 avg_p = data["avg_target_prob"][m]
                 max_p = data["max_target_prob"][m]
 
-                # Composite exposure: target density + average target risk + peak target risk
-                target_component = avg_p * 0.45 + max_p * 0.25
-                raw_exposure = 15.0 + base_w * 0.90 + target_component * 0.52
+                # Composite exposure: strategic density + peak target risk + average target risk
+                target_component = 0.60 * max_p + 0.40 * avg_p
+                raw_exposure = base_w * 1.35 + target_component * 0.78
 
                 exp_val = round(min(95.0, max(20.0, raw_exposure)), 1)
                 safety_val = round(max(5.0, 100.0 - exp_val), 1)
@@ -570,7 +578,7 @@ class KyivRiskEngine:
                 data["exposure_by_mode"][m] = exp_val
                 data["safety_by_mode"][m] = safety_val
 
-                if exp_val >= 75:
+                if exp_val >= 70:
                     st = "КРИТИЧНИЙ РИЗИК (висока щільність цілей, енергетика/ВПК)"
                     bd = "#dc2626"
                 elif exp_val >= 60:

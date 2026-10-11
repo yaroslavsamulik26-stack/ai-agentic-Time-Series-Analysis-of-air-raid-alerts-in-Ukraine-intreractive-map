@@ -213,6 +213,19 @@ class TestKyivDefensePipeline(unittest.TestCase):
                 self.assertIn("corridor_proximity", scores[mode])
                 self.assertIn("air_defense", scores[mode])
 
+                # Verify exact precalculated horizons
+                self.assertIn("horizons", scores[mode])
+                for h_key in ["24h", "7d", "30d"]:
+                    self.assertIn(h_key, scores[mode]["horizons"])
+                    self.assertGreaterEqual(scores[mode]["horizons"][h_key], 0.0)
+                    self.assertLessEqual(scores[mode]["horizons"][h_key], 100.0)
+                self.assertLessEqual(scores[mode]["horizons"]["24h"], scores[mode]["horizons"]["30d"])
+
+        # Verify dynamic calibrated district spectrum spanning tiers
+        all_exposures = [d["exposure_index"] for d in results["districts"]]
+        self.assertTrue(any(exp >= 60.0 for exp in all_exposures), "High risk tier (>=60) must be populated")
+        self.assertTrue(any(exp <= 45.0 for exp in all_exposures), "Moderate risk tier (<=45) must be populated")
+
         self.assertIn("authoritative_sources", results)
         self.assertIn("historical_target_analysis", results)
 

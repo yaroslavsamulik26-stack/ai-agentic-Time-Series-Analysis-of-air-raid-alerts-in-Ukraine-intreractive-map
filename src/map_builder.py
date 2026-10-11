@@ -840,8 +840,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <!-- Legend Overlay -->
     <div class="map-legend">
         <div style="font-weight:700; margin-bottom:2px; color:#cbd5e1;">Рівень небезпеки районів:</div>
-        <div class="legend-item"><div class="legend-color" style="background:#dc2626;"></div> 75-100: Критичний ризик</div>
-        <div class="legend-item"><div class="legend-color" style="background:#ea580c;"></div> 60-74: Високий ризик</div>
+        <div class="legend-item"><div class="legend-color" style="background:#dc2626;"></div> 70-100: Критичний ризик</div>
+        <div class="legend-item"><div class="legend-color" style="background:#ea580c;"></div> 60-69: Високий ризик</div>
         <div class="legend-item"><div class="legend-color" style="background:#eab308;"></div> 45-59: Підвищений ризик</div>
         <div class="legend-item"><div class="legend-color" style="background:#10b981;"></div> 0-44: Помірний ризик</div>
         <div style="margin-top:4px; border-top:1px solid rgba(255,255,255,0.1); padding-top:4px; display:flex; flex-direction:column; gap:3px;">
@@ -914,9 +914,18 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 </div>
 
                 <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:8px; padding:12px;">
+                    <h3 style="font-size:13px; font-weight:700; color:#38bdf8; margin-bottom:6px;">
+                        <i class="fa-solid fa-list-check"></i> 4. Типологія наслідків ударів та моделювання загроз
+                    </h3>
+                    <p style="font-size:12px; line-height:1.5; color:#cbd5e1;">
+                        Аналіз 835 подій диференціює характер наслідків на: <b>Падіння уламків</b> (типово для перехоплень БпЛА та крилатих ракет), <b>Пряме влучання</b> (цільові удари балістики та роїв дронів), та <b>Збиття в повітрі</b> мобільними вогневими групами й зенітними установками. За типом засобів ураження фіксуються <b>Балістична ракета</b> (Іскандер-М/KN-23/Кинджал) та <b>Крилата ракета</b> (Х-101/Калібр).
+                    </p>
+                </div>
+
+                <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:8px; padding:12px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:6px;">
                         <h3 style="font-size:13px; font-weight:700; color:#38bdf8; display:flex; align-items:center; gap:6px;">
-                            <i class="fa-solid fa-database"></i> 4. Згенероване джерело даних для NotebookLM
+                            <i class="fa-solid fa-database"></i> 5. Згенероване джерело даних для NotebookLM
                         </h3>
                         <button id="copyDigestBtn" onclick="copyNotebookLMDigest()" style="background:#0284c7; color:#fff; border:none; border-radius:5px; padding:4px 10px; font-size:11px; font-weight:600; cursor:pointer;">
                             <i class="fa-solid fa-copy"></i> Копіювати дайджест
@@ -930,7 +939,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
                 <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:8px; padding:12px;">
                     <h3 style="font-size:13px; font-weight:700; color:#a855f7; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
-                        <i class="fa-solid fa-scale-balanced"></i> 5. Офіційні джерела даних & Репозиторії (Authoritative Sources)
+                        <i class="fa-solid fa-scale-balanced"></i> 6. Офіційні джерела даних & Репозиторії (Authoritative Sources)
                     </h3>
                     <p style="font-size:11px; line-height:1.45; color:#cbd5e1; margin-bottom:8px;">
                         ⚠️ <b>Чому на карті відсутні окремі точки ударів:</b> Відповідно до вимог операційної безпеки та достовірності, офіційні джерела публікують інформацію виключно на рівні районів столиці без чутливих точних координат уражень. Замість неточних точкових маркерів проєкт використовує <b>Гібридну предиктивну модель</b> прогнозування імовірності P<sub>Target</sub> для уцілілих об'єктів критичної інфраструктури.
@@ -1023,21 +1032,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         let currentTimeRange = '7d';   // Default to last 7 days!
         let activeCategories = new Set(['energy', 'transport', 'admin', 'industry', 'defense']);
 
-        function getCutoffDate(rangeKey) {
-            if (rangeKey === 'all') return null;
-            let maxTs = 0;
-            INCIDENTS_DATA.forEach(inc => {
-                let parsed = Date.parse(inc.datetime.replace(' ', 'T'));
-                if (!isNaN(parsed) && parsed > maxTs) maxTs = parsed;
-            });
-            if (maxTs === 0) maxTs = Date.now();
-
-            if (rangeKey === '7d') {
-                return maxTs - (7 * 24 * 60 * 60 * 1000);
-            } else if (rangeKey === '30d') {
-                return maxTs - (30 * 24 * 60 * 60 * 1000);
-            }
-            return null;
+        function getScoreTier(score) {
+            if (score >= 70) return 'Критичний';
+            if (score >= 50) return 'Високий';
+            if (score >= 30) return 'Середній';
+            return 'Помірний';
         }
 
         function setTimeRange(rangeKey) {
@@ -1045,20 +1044,47 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             document.querySelectorAll('.time-btn').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.range === rangeKey);
             });
-            // Tactical (24h), Operational (7d), or Strategic (30d) time hazard scaling
-            const hazardMultiplier = (rangeKey === '24h') ? 0.76 : (rangeKey === '30d' ? 1.12 : 1.0);
+
+            // Update P_Target and tier for every object based on exact precalculated horizon
             RISK_DATA.objects.forEach(obj => {
                 for (const m of ['all', 'yellow', 'orange', 'red']) {
                     if (obj.scores && obj.scores[m]) {
-                        if (obj.scores[m]._base_p_target === undefined) {
-                            obj.scores[m]._base_p_target = obj.scores[m].p_target;
-                        }
-                        const adj = Math.min(100.0, Math.max(5.0, Math.round(obj.scores[m]._base_p_target * hazardMultiplier * 10) / 10));
-                        obj.scores[m].p_target = adj;
-                        obj.scores[m].score = adj;
+                        const hMap = obj.scores[m].horizons || {};
+                        const val = (hMap[rangeKey] !== undefined)
+                            ? hMap[rangeKey]
+                            : ((rangeKey === '24h') ? Math.max(5.0, Math.round(obj.scores[m].p_target * 0.76 * 10) / 10)
+                              : (rangeKey === '30d') ? Math.min(100.0, Math.round(obj.scores[m].p_target * 1.13 * 10) / 10)
+                              : obj.scores[m].p_target);
+                        obj.scores[m].p_target = val;
+                        obj.scores[m].score = val;
+                        obj.scores[m].tier = getScoreTier(val);
                     }
                 }
             });
+
+            // Recompute district dynamic metrics (avg target prob, exposure) for the active horizon
+            const hMultiplier = (rangeKey === '24h') ? 0.84 : (rangeKey === '30d' ? 1.10 : 1.0);
+            RISK_DATA.districts.forEach(d => {
+                for (const m of ['all', 'yellow', 'orange', 'red']) {
+                    if (d.base_exposure === undefined) {
+                        d.base_exposure = { ...d.exposure_by_mode };
+                        d.base_safety = { ...d.safety_by_mode };
+                        d.base_avg_p = { ...d.avg_target_prob };
+                    }
+                    const baseExp = d.base_exposure[m] || 50.0;
+                    const adjExp = Math.min(95.0, Math.max(15.0, Math.round(baseExp * hMultiplier * 10) / 10));
+                    d.exposure_by_mode[m] = adjExp;
+                    d.safety_by_mode[m] = Math.round((100.0 - adjExp) * 10) / 10;
+                    if (d.base_avg_p && d.base_avg_p[m]) {
+                        d.avg_target_prob[m] = Math.round(d.base_avg_p[m] * hMultiplier * 10) / 10;
+                    }
+                    if (m === currentThreatMode || (currentThreatMode === 'all' && m === 'all')) {
+                        d.exposure_index = adjExp;
+                        d.safety_score = d.safety_by_mode[m];
+                    }
+                }
+            });
+
             renderDistrictsPolygons();
             renderDistrictsList();
             renderObjects();
@@ -1199,7 +1225,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }
 
         function getScoreColor(score) {
-            if (score >= 75) return '#dc2626'; // Red / Critical
+            if (score >= 70) return '#dc2626'; // Red / Critical
             if (score >= 60) return '#ea580c'; // Orange / High
             if (score >= 45) return '#eab308'; // Yellow / Moderate-High
             return '#10b981'; // Green / Moderate
@@ -1492,14 +1518,17 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             }
             renderObjects();
             renderObjectsList();
+            renderPriorityTargetsList();
         }
 
         // Tabs
         function switchPanelTab(tabId) {
             document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-            event.currentTarget.classList.add('active');
-            document.getElementById(tabId).classList.add('active');
+            const tabBtn = (window.event && window.event.currentTarget) || document.querySelector(`.panel-tab[onclick*="${tabId}"]`);
+            if (tabBtn) tabBtn.classList.add('active');
+            const pane = document.getElementById(tabId);
+            if (pane) pane.classList.add('active');
         }
 
         // Panel Close / Open
@@ -1586,12 +1615,17 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
             const modeKey = (currentThreatMode === 'all') ? 'all' : currentThreatMode;
             // Rank non-defense intact facilities by predicted hit probability P_Target
-            const targets = RISK_DATA.objects.filter(o => o.category !== 'defense');
+            const targets = RISK_DATA.objects.filter(o => o.category !== 'defense' && activeCategories.has(o.category));
             targets.sort((a, b) => {
                 const probA = (a.scores[modeKey] && a.scores[modeKey].p_target !== undefined) ? a.scores[modeKey].p_target : (a.scores['all'].p_target || 0);
                 const probB = (b.scores[modeKey] && b.scores[modeKey].p_target !== undefined) ? b.scores[modeKey].p_target : (b.scores['all'].p_target || 0);
                 return probB - probA;
             });
+
+            if (targets.length === 0) {
+                container.innerHTML = '<div style="font-size:11px; color:#94a3b8; padding:10px; text-align:center;">Немає цільових об’єктів у вибраних категоріях.</div>';
+                return;
+            }
 
             targets.forEach((obj, idx) => {
                 const scoreObj = obj.scores[modeKey] || obj.scores['all'];
