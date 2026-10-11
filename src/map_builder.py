@@ -2064,7 +2064,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             }
 
             if (filtered.length === 0) {
-                container.innerHTML = '<div style="font-size:11px; color:#94a3b8; padding:12px; text-align:center;"><i class="fa-solid fa-magnifying-glass"></i> Об\'єктів за запитом не знайдено.</div>';
+                container.innerHTML = `<div style="font-size:11px; color:#94a3b8; padding:12px; text-align:center;"><i class="fa-solid fa-magnifying-glass"></i> Об'єктів за запитом не знайдено.</div>`;
                 return;
             }
 
@@ -2115,7 +2115,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             });
 
             if (targets.length === 0) {
-                container.innerHTML = '<div style="font-size:11px; color:#94a3b8; padding:12px; text-align:center;"><i class="fa-solid fa-magnifying-glass"></i> Немає цільових об’єктів за запитом.</div>';
+                container.innerHTML = `<div style="font-size:11px; color:#94a3b8; padding:12px; text-align:center;"><i class="fa-solid fa-magnifying-glass"></i> Немає цільових об'єктів за запитом.</div>`;
                 return;
             }
 

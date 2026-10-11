@@ -447,6 +447,19 @@ class TestKyivDefensePipeline(unittest.TestCase):
         self.assertIn('id="modal-nblm-turrets">3 сектори<', content)
         self.assertNotIn("Оболонський район, Оболонь,", content)
 
+    def test_index_html_no_js_syntax_quote_errors(self):
+        """Verify index.html contains no unescaped single quotes breaking JS string literals."""
+        content = self.index_path.read_text(encoding="utf-8")
+        import re
+        scripts = re.findall(r'<script.*?>([\s\S]*?)</script>', content, re.IGNORECASE)
+        for s in scripts:
+            for line in s.split('\n'):
+                trimmed = line.strip()
+                if trimmed.startswith("container.innerHTML = '") and trimmed.endswith("';"):
+                    inner = trimmed[len("container.innerHTML = '"):-2]
+                    self.assertNotIn("'", inner, f"Broken unescaped single quote found in: {line}")
+
 
 if __name__ == "__main__":
     unittest.main()
+
