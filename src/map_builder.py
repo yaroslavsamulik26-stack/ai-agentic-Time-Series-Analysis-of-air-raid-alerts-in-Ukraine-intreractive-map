@@ -85,6 +85,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
             user-select: none;
             cursor: move;
+            max-width: calc(100vw - 390px);
+            flex-wrap: wrap;
         }
 
         .title-block {
@@ -691,7 +693,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 <i class="fa-solid fa-triangle-exclamation"></i> Ударні БпЛА (Shahed)
             </button>
             <button class="mode-btn" data-mode="red" onclick="setThreatMode('red')" title="Ракети (Крилаті / Балістика)">
-                <i class="fa-solid fa-radiation"></i> Ракети
+                <i class="fa-solid fa-radiation"></i> Ракети (Крилаті / Балістика)
             </button>
         </div>
 
@@ -1121,7 +1123,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             const modeNamesUA = {
                 'all': 'Всі загрози',
                 'yellow': 'Ударні БпЛА (Shahed)',
-                'red': 'Ракети'
+                'red': 'Ракети (Крилаті / Балістика)'
             };
 
             THREAT_CORRIDORS.forEach(c => {
@@ -1376,6 +1378,39 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             }
         }
 
+        function formatAlertLevelUA(lvl) {
+            switch(lvl) {
+                case 'yellow':
+                    return 'Жовтий рівень (БпЛА)';
+                case 'red':
+                    return 'Червоний рівень (Ракети)';
+                case 'orange':
+                    return 'Жовтий рівень (БпЛА)';
+                default:
+                    return 'Жовтий рівень (БпЛА)';
+            }
+        }
+
+        function formatLocationUA(district, locHint) {
+            if (!locHint) {
+                return (district.includes('сектор') || district.includes('зведення') || district.includes('район'))
+                    ? district
+                    : `${district} район`;
+            }
+            let hint = locHint.trim();
+            if (hint.startsWith(district + ',') || hint.startsWith(district + ':')) {
+                hint = hint.substring(district.length + 1).trim();
+            } else if (hint.startsWith(district + ' -')) {
+                hint = hint.substring(district.length + 2).trim();
+            } else if (hint === 'Сектор ' + district || hint === district) {
+                hint = '';
+            }
+            const distLabel = (district.includes('сектор') || district.includes('зведення') || district.includes('район'))
+                ? district
+                : `${district} район`;
+            return hint ? `${distLabel}, ${hint}` : distLabel;
+        }
+
         // 3. Render Incidents (with 7-day default filter)
         function renderIncidents() {
             incidentsLayerGroup.clearLayers();
@@ -1392,12 +1427,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 }
                 count++;
 
-                let incColor = '#eab308';
-                if (inc.threat_type === 'missile_ballistic' || inc.alert_level === 'red') {
-                    incColor = '#ef4444';
-                } else if (inc.threat_type === 'missile_cruise') {
-                    incColor = '#ec4899';
-                }
+                const incColor = (inc.alert_level === 'red' || inc.threat_type === 'missile_ballistic' || inc.threat_type === 'missile_cruise') ? '#ef4444' : '#eab308';
 
                 const incidentIcon = L.divIcon({
                     html: `<div style="background:${incColor}; width:13px; height:13px; border-radius:50%; border:2px solid #ffffff; box-shadow:0 0 6px ${incColor};"></div>`,
@@ -1408,15 +1438,23 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
                 const threatUA = formatThreatTypeUA(inc.threat_type);
                 const impactUA = formatImpactTypeUA(inc.impact_type);
+                const alertLevelUA = formatAlertLevelUA(inc.alert_level);
+                const locationUA = formatLocationUA(inc.district, inc.location_hint);
+                const consequenceText = inc.description || impactUA;
 
                 const marker = L.marker([inc.lat, inc.lon], { icon: incidentIcon });
                 const popup = `
-                    <div class="popup-title" style="margin-bottom:6px;"><i class="fa-solid fa-triangle-exclamation" style="color:${incColor}"></i> ${inc.district}</div>
+                    <div class="popup-title" style="margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                        <span><i class="fa-solid fa-triangle-exclamation" style="color:${incColor}"></i> ${inc.district}</span>
+                        <span style="font-size:9px; font-weight:700; padding:2px 6px; border-radius:4px; background:${incColor}22; color:${incColor}; border:1px solid ${incColor}55; white-space:nowrap;">
+                            ${alertLevelUA}
+                        </span>
+                    </div>
                     <div style="font-size:11px; line-height:1.5; color:#cbd5e1;">
-                        <div><b>Локація:</b> ${inc.district}, ${inc.location_hint}</div>
+                        <div><b>Локація:</b> ${locationUA}</div>
                         <div><b>Час:</b> ${inc.datetime}</div>
                         <div><b>Тип загрози:</b> ${threatUA}</div>
-                        <div><b>Наслідки:</b> ${inc.description || impactUA}</div>
+                        <div><b>Наслідки:</b> ${consequenceText}</div>
                         <div><b>Джерело:</b> ${inc.source}</div>
                     </div>
                 `;
@@ -1563,16 +1601,20 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     badgeBg = '#ef444422';
                 }
 
+                const threatUA = formatThreatTypeUA(inc.threat_type);
+                const alertLevelUA = formatAlertLevelUA(inc.alert_level);
+                const locationUA = formatLocationUA(inc.district, inc.location_hint);
+
                 const card = document.createElement('div');
                 card.className = 'stat-card';
                 card.onclick = () => map.flyTo([inc.lat, inc.lon], 15);
                 card.innerHTML = `
                     <div class="district-info">
                         <h4>${inc.district}</h4>
-                        <p>${inc.datetime.split(' ')[0]} • ${inc.location_hint}</p>
+                        <p>${inc.datetime.split(' ')[0]} • ${locationUA}</p>
                     </div>
-                    <span style="font-size:10px; padding:2px 6px; border-radius:4px; background:${badgeBg}; color:${badgeColor}; border:1px solid ${badgeColor}44; font-weight:600;">
-                        ${formatThreatTypeUA(inc.threat_type)}
+                    <span style="font-size:10px; padding:2px 6px; border-radius:4px; background:${badgeBg}; color:${badgeColor}; border:1px solid ${badgeColor}44; font-weight:600;" title="${alertLevelUA}">
+                        ${threatUA}
                     </span>
                 `;
                 container.appendChild(card);
@@ -1587,7 +1629,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             const summary = RISK_DATA.incidents_summary || {};
             const byThreat = summary.by_threat || {};
             const total = summary.total || INCIDENTS_DATA.length;
-            const shahed = (byThreat.drone_shahed || 0) + (byThreat.drone_jet || 0);
+            const shahed = (byThreat.drone_shahed || 0) + (byThreat.drone_jet || 0) + (byThreat.drone_decoy || 0);
             const missiles = (byThreat.missile_ballistic || 0) + (byThreat.missile_cruise || 0);
             const turrets = RISK_DATA.objects.filter(o => o.category === 'defense').length;
 

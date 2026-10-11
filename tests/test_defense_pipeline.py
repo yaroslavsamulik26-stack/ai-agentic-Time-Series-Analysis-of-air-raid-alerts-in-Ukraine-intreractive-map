@@ -243,13 +243,34 @@ class TestKyivDefensePipeline(unittest.TestCase):
         self.assertNotIn("cartocdn", content.lower(), "CartoDB / Dark map tiles should be eliminated")
 
     def test_ui_terminology_localization(self):
-        """Verify that UI contains 3 threat modes and no technical English identifiers in markup/labels."""
+        """Verify that UI contains 3 threat modes, Ukrainian terminology, structured popups, and no technical English identifiers."""
         content = self.index_path.read_text(encoding="utf-8")
 
-        # Threat mode switcher: 3 clear options
+        # Threat mode switcher: 3 clear options (R2)
         self.assertIn("Всі загрози", content)
         self.assertIn("Ударні БпЛА (Shahed)", content)
-        self.assertIn("Ракети", content)
+        self.assertIn("Ракети (Крилаті / Балістика)", content)
+
+        # Ukrainian terminology localization (R3)
+        self.assertIn("Жовтий рівень (БпЛА)", content)
+        self.assertIn("Червоний рівень (Ракети)", content)
+        self.assertIn("Падіння уламків", content)
+        self.assertIn("Пряме влучання", content)
+        self.assertIn("Збиття в повітрі", content)
+        self.assertIn("Балістична ракета", content)
+        self.assertIn("Крилата ракета", content)
+
+        # Structured concise popup fields (R4)
+        self.assertIn("<b>Локація:</b>", content)
+        self.assertIn("<b>Час:</b>", content)
+        self.assertIn("<b>Тип загрози:</b>", content)
+        self.assertIn("<b>Наслідки:</b>", content)
+        self.assertIn("<b>Джерело:</b>", content)
+
+        # Ensure no repetitive location strings like "Дарницький, Дарницький"
+        self.assertNotIn("Дарницький, Дарницький", content)
+        self.assertNotIn("Оболонський, Оболонський", content)
+        self.assertNotIn("Святошинський, Святошинський", content)
 
         # Technical identifiers should not be displayed in UI badges/labels/popups
         forbidden_ui_patterns = [

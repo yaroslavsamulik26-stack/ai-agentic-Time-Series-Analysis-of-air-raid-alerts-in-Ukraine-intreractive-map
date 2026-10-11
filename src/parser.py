@@ -311,7 +311,7 @@ class KyivDataIngestionPipeline:
                 elif "човнов" in raw_text_lower:
                     loc_hint = "Оболонь, човнова станція (затока Собаче гирло)"
                 elif "навчальн" in raw_text_lower:
-                    loc_hint = f"{district}, навчальний заклад"
+                    loc_hint = "Навчальний заклад / прилегла зона"
                 elif "північн" in raw_text_lower and "міст" in raw_text_lower:
                     loc_hint = "Північний міст через Дніпро"
                 elif "південн" in raw_text_lower and "міст" in raw_text_lower:
@@ -329,19 +329,19 @@ class KyivDataIngestionPipeline:
                 elif "резервуар" in raw_text_lower and "оболон" in raw_text_lower:
                     loc_hint = "Резервуари ПММ «Оболонь» (вул. Богатирська)"
                 elif "азс" in raw_text_lower or "азк" in raw_text_lower:
-                    loc_hint = f"{district}, АЗС / паливний комплекс"
+                    loc_hint = "АЗС / паливний комплекс"
                 elif "гараж" in raw_text_lower:
-                    loc_hint = f"{district}, гаражний кооператив"
+                    loc_hint = "Гаражний кооператив"
                 elif "парковк" in raw_text_lower or "авто" in raw_text_lower:
-                    loc_hint = f"{district}, автостоянка / прибудинкова зона"
+                    loc_hint = "Автостоянка / прибудинкова зона"
                 elif "склад" in raw_text_lower:
-                    loc_hint = f"{district}, складські приміщення"
+                    loc_hint = "Складські приміщення"
                 elif "дитсад" in raw_text_lower:
-                    loc_hint = f"{district}, дитячий садок"
+                    loc_hint = "Дитячий садок"
                 elif "лікарн" in raw_text_lower or "шпиталь" in raw_text_lower or "госпітал" in raw_text_lower:
-                    loc_hint = f"{district}, медичний заклад"
+                    loc_hint = "Медичний заклад"
                 elif "багатоповерхів" in raw_text_lower or "житлов" in raw_text_lower:
-                    loc_hint = f"{district}, житлова забудова"
+                    loc_hint = "Житлова забудова"
 
                 consequence_fact = extract_concise_consequence(raw_text_lower, impact_type)
                 official_source = normalize_source(clean_text, channel_name)
