@@ -1,0 +1,180 @@
+import unittest
+import json
+from pathlib import Path
+import pandas as pd
+import numpy as np
+
+# Path setup
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+import sys
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from src.parser import KyivDataIngestionPipeline
+from src.risk_engine import KyivRiskEngine, haversine_distance_km
+from src.time_series import KyivAlertTimeSeriesAnalyzer
+
+
+class TestKyivDefensePipeline(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        cls.project_root = PROJECT_ROOT
+        cls.incidents_path = cls.project_root / "data" / "processed" / "incidents_unified.csv"
+        cls.infra_path = cls.project_root / "data" / "curated" / "kyiv_infrastructure.geojson"
+        cls.districts_path = cls.project_root / "data" / "curated" / "kyiv_districts.geojson"
+        cls.index_path = cls.project_root / "index.html"
+        cls.parser = KyivDataIngestionPipeline(cls.project_root)
+
+    # --- 1. Parser & Text Normalization Tests ---
+    def test_apostrophe_normalization(self):
+        """Test Ukrainian typographical apostrophes (U+2019, U+02BC) normalization."""
+        texts = [
+            "Вибухи в Солом’янському районі",
+            "Вибухи в Соломʼянському районі",
+            "Вибухи в Солом'янському районі"
+        ]
+        for t in texts:
+            districts = self.parser.extract_districts(t)
+            self.assertIn("Солом'янський", districts, f"Failed to match district for text: {t}")
+
+    def test_multi_district_extraction(self):
+        """Test extraction of multiple districts in single report."""
+        sample_text = "Падіння уламків зафіксовано в Оболонському та Дарницькому районах."
+        districts = self.parser.extract_districts(sample_text)
+        self.assertIn("Оболонський", districts)
+        self.assertIn("Дарницький", districts)
+
+    def test_threat_type_classification(self):
+        """Test classification of drone_jet, drone_shahed, missile_ballistic, missile_cruise."""
+        # Jet drone
+        t_jet, lvl_jet = self.parser.classify_threat("Атака реактивного шахеда Shahed-238 на міст")
+        self.assertEqual(t_jet, "drone_jet")
+        self.assertEqual(lvl_jet, "orange")
+
+        # Piston drone
+        t_shahed, lvl_shahed = self.parser.classify_threat("Рух групи ударних БпЛА шахед з півночі")
+        self.assertEqual(t_shahed, "drone_shahed")
+        self.assertEqual(lvl_shahed, "yellow")
+
+        # Ballistic missile
+        t_bal, lvl_bal = self.parser.classify_threat("Швидкісна балістика на Київ, Іскандер-М укриття!")
+        self.assertEqual(t_bal, "missile_ballistic")
+        self.assertEqual(lvl_bal, "red")
+
+        # Cruise missile
+        t_cr, lvl_cr = self.parser.classify_threat("Крилата ракета Х-101 курсом на правий берег")
+        self.assertEqual(t_cr, "missile_cruise")
+        self.assertEqual(lvl_cr, "red")
+
+    def test_processed_incidents_dataset(self):
+        """Verify processed incidents CSV schema, non-emptiness, and coordinates."""
+        self.assertTrue(cls_file_exists := self.incidents_path.exists(), "incidents_unified.csv does not exist")
+        df = pd.read_csv(self.incidents_path)
+        self.assertGreaterEqual(len(df), 700, "Dataset should have at least 700 verified incidents")
+
+        required_cols = {"id", "datetime", "district", "lat", "lon", "alert_level", "threat_type"}
+        for col in required_cols:
+            self.assertIn(col, df.columns)
+
+        # Coordinate boundaries (Kyiv metro area)
+        self.assertTrue((df["lat"] >= 50.1).all() and (df["lat"] <= 50.7).all(), "Latitude out of Kyiv bounds")
+        self.assertTrue((df["lon"] >= 30.0).all() and (df["lon"] <= 31.0).all(), "Longitude out of Kyiv bounds")
+
+        # Alert level distribution check
+        alert_levels = set(df["alert_level"].unique())
+        self.assertIn("yellow", alert_levels)
+        self.assertIn("red", alert_levels)
+        self.assertIn("orange", alert_levels)
+
+    # --- 2. Risk Engine & Infrastructure Tests ---
+    def test_infrastructure_curated_data(self):
+        """Test infrastructure catalog completeness, 44 objects, defense category presence."""
+        self.assertTrue(self.infra_path.exists(), "kyiv_infrastructure.geojson missing")
+        with open(self.infra_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        features = data.get("features", [])
+        self.assertEqual(len(features), 44, "Expected exactly 44 infrastructure and defense objects")
+
+        categories = set(f["properties"]["category"] for f in features)
+        self.assertIn("defense", categories)
+        self.assertIn("energy", categories)
+        self.assertIn("transport", categories)
+        self.assertIn("admin", categories)
+        self.assertIn("industry", categories)
+
+        # Ensure defense objects exist and have proper coverage
+        defense_objects = [f for f in features if f["properties"]["category"] == "defense"]
+        self.assertGreaterEqual(len(defense_objects), 3, "Expected at least 3 air defense sectors/turret lines")
+
+    def test_risk_engine_calculations(self):
+        """Test risk engine output: district rankings, scores, and mitigation."""
+        engine = KyivRiskEngine()
+        results = engine.calculate_risk_scores()
+
+        self.assertIn("districts", results)
+        self.assertIn("objects", results)
+        self.assertEqual(len(results["districts"]), 10, "Expected 10 Kyiv districts")
+        self.assertEqual(len(results["objects"]), 44, "Expected 44 evaluated objects")
+
+        for d in results["districts"]:
+            self.assertGreaterEqual(d["exposure_index"], 0.0)
+            self.assertLessEqual(d["exposure_index"], 100.0)
+            self.assertAlmostEqual(d["exposure_index"] + d["safety_score"], 100.0, places=1)
+
+        # Verify threat mode scores for objects
+        for obj in results["objects"]:
+            scores = obj["scores"]
+            for mode in ["yellow", "orange", "red", "all"]:
+                self.assertIn(mode, scores)
+                self.assertGreaterEqual(scores[mode]["score"], 0.0)
+                self.assertLessEqual(scores[mode]["score"], 100.0)
+
+    def test_haversine_distance(self):
+        """Verify spatial kernel distance function."""
+        # Distance between Kyiv Independence Square (50.4501, 30.5234) and Kyiv TV Tower (50.4714, 30.4533) ~5.4 km
+        d = haversine_distance_km(50.4501, 30.5234, 50.4714, 30.4533)
+        self.assertAlmostEqual(d, 5.4, delta=0.5)
+
+    # --- 3. Time Series Analytics Tests ---
+    def test_time_series_leak_free_evaluation(self):
+        """Verify time series evaluation runs without look-ahead leakage."""
+        analyzer = KyivAlertTimeSeriesAnalyzer()
+        eval_metrics = analyzer.run_temporal_evaluation()
+
+        self.assertIn("metrics", eval_metrics)
+        metrics = eval_metrics["metrics"]
+        self.assertIn("model_roc_auc", metrics)
+        self.assertIn("baseline_roc_auc", metrics)
+        self.assertIn("model_brier_score", metrics)
+
+        # Probabilistic validation
+        self.assertGreaterEqual(metrics["model_roc_auc"], 0.5)
+        self.assertLessEqual(metrics["model_roc_auc"], 1.0)
+        self.assertGreaterEqual(metrics["model_brier_score"], 0.0)
+        self.assertLessEqual(metrics["model_brier_score"], 0.5)
+
+    # --- 4. Dashboard & Artifact Integrity Tests ---
+    def test_index_html_integrity(self):
+        """Verify generated dashboard exists, has size > 500KB, and contains key components."""
+        self.assertTrue(self.index_path.exists(), "index.html missing")
+        content = self.index_path.read_text(encoding="utf-8")
+        self.assertGreater(len(content), 500_000, "Dashboard file is unexpectedly small")
+
+        # Check required architectural features
+        self.assertIn("NotebookLM Defense Intel Briefing", content)
+        self.assertIn("THREAT_CORRIDORS", content)
+        self.assertIn("corridorsLayerGroup", content)
+        self.assertIn("fa-shield-halved", content)
+        self.assertIn("Google Maps", content)
+        self.assertIn("Google Satellite", content)
+        self.assertIn("Реактивні БпЛА", content)
+        self.assertIn("Ешелони ППО & Турелі", content)
+
+        # Ensure obsolete Dark Map tile is completely absent
+        self.assertNotIn("cartocdn", content.lower(), "CartoDB / Dark map tiles should be eliminated")
+
+
+if __name__ == "__main__":
+    unittest.main()

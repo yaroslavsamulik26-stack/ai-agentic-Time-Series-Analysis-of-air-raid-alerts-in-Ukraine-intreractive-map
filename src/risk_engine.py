@@ -61,9 +61,11 @@ class KyivRiskEngine:
         past 3-month impacts/debris falls.
         """
         df = self.incidents_df
-        if mode == "yellow":
+        if mode in ["yellow", "shahed"]:
             df = df[df["alert_level"] == "yellow"]
-        elif mode == "red":
+        elif mode in ["orange", "jet"]:
+            df = df[df["alert_level"] == "orange"]
+        elif mode in ["red", "missile"]:
             df = df[df["alert_level"] == "red"]
 
         if df.empty:
@@ -82,7 +84,8 @@ class KyivRiskEngine:
 
     def calculate_risk_scores(self) -> dict:
         """
-        Calculates Risk Score (0-100) for Yellow, Red, and All modes for each facility.
+        Calculates Risk Score (0-100) for Yellow (Shahed), Orange (Jet Shahed),
+        Red (Missiles/Ballistics), and Combined (All) modes for each facility.
         """
         if not self.infra_geojson:
             self.load_data()
@@ -98,13 +101,16 @@ class KyivRiskEngine:
             coords = feat["geometry"]["coordinates"]
             lon, lat = coords[0], coords[1]
             district = props.get("district", "")
+            cat = props.get("category", "")
 
             # 1. Base vulnerability
             v_yellow = float(props.get("vuln_yellow", 20))
             v_red = float(props.get("vuln_red", 20))
+            v_orange = round(v_yellow * 0.6 + v_red * 0.4, 1)
 
             # 2. Incident Proximity (0 - 30)
             prox_yellow = self.calculate_incident_proximity_score(lat, lon, mode="yellow")
+            prox_orange = self.calculate_incident_proximity_score(lat, lon, mode="orange")
             prox_red = self.calculate_incident_proximity_score(lat, lon, mode="red")
             prox_all = self.calculate_incident_proximity_score(lat, lon, mode="all")
 
@@ -112,14 +118,23 @@ class KyivRiskEngine:
             dist_incidents = incidents_by_district.get(district, 0)
             dist_factor = round((dist_incidents / max_district_incidents) * 10.0, 1)
 
-            # 4. Temporal factor defaults (Shahed night peak bonus +15, Red peak bonus +15)
+            # 4. Temporal factor defaults
             time_factor_yellow = 16.0
+            time_factor_orange = 15.0
             time_factor_red = 14.0
 
             # Combined Scores (capped at 100)
             score_yellow = min(100.0, round(v_yellow + prox_yellow + time_factor_yellow + dist_factor, 1))
+            score_orange = min(100.0, round(v_orange + prox_orange + time_factor_orange + dist_factor, 1))
             score_red = min(100.0, round(v_red + prox_red + time_factor_red + dist_factor, 1))
-            score_all = min(100.0, round(max(score_yellow, score_red) * 0.7 + min(score_yellow, score_red) * 0.3, 1))
+            score_all = min(100.0, round(max(score_yellow, score_orange, score_red) * 0.6 + min(score_yellow, score_red) * 0.4, 1))
+
+            # Defense facilities have active protection
+            if cat == "defense":
+                score_yellow = round(score_yellow * 0.65, 1)
+                score_orange = round(score_orange * 0.65, 1)
+                score_red = round(score_red * 0.70, 1)
+                score_all = round(score_all * 0.65, 1)
 
             def get_tier(s: float) -> str:
                 if s >= 80:
@@ -133,7 +148,7 @@ class KyivRiskEngine:
             obj_data = {
                 "id": props["id"],
                 "name": props["name"],
-                "category": props["category"],
+                "category": cat,
                 "district": district,
                 "lat": lat,
                 "lon": lon,
@@ -144,6 +159,12 @@ class KyivRiskEngine:
                         "tier": get_tier(score_yellow),
                         "vulnerability": v_yellow,
                         "proximity": prox_yellow,
+                    },
+                    "orange": {
+                        "score": score_orange,
+                        "tier": get_tier(score_orange),
+                        "vulnerability": v_orange,
+                        "proximity": prox_orange,
                     },
                     "red": {
                         "score": score_red,
@@ -186,6 +207,7 @@ class KyivRiskEngine:
                 "incidents_count": incidents_by_district.get(name, 0),
                 "objects_count": 0,
                 "avg_yellow_score": 0.0,
+                "avg_orange_score": 0.0,
                 "avg_red_score": 0.0,
             }
 
@@ -194,6 +216,7 @@ class KyivRiskEngine:
             if d in district_stats:
                 district_stats[d]["objects_count"] += 1
                 district_stats[d]["avg_yellow_score"] += obj["scores"]["yellow"]["score"]
+                district_stats[d]["avg_orange_score"] += obj["scores"]["orange"]["score"]
                 district_stats[d]["avg_red_score"] += obj["scores"]["red"]["score"]
 
         results = []
@@ -201,9 +224,11 @@ class KyivRiskEngine:
             cnt = data["objects_count"]
             if cnt > 0:
                 data["avg_yellow_score"] = round(data["avg_yellow_score"] / cnt, 1)
+                data["avg_orange_score"] = round(data["avg_orange_score"] / cnt, 1)
                 data["avg_red_score"] = round(data["avg_red_score"] / cnt, 1)
             else:
                 data["avg_yellow_score"] = 45.0
+                data["avg_orange_score"] = 45.0
                 data["avg_red_score"] = 45.0
 
             # High-contrast relative incident scaling based on actual strikes/debris
@@ -213,7 +238,7 @@ class KyivRiskEngine:
             max_c = max(all_incident_counts) if all_incident_counts else 1
 
             if max_c > min_c:
-                # Logarithmic normalization handles heavy-tailed strike counts (e.g. 262 vs 56 vs 9)
+                # Logarithmic normalization handles heavy-tailed strike counts
                 norm_inc = (math.log(1 + data["incidents_count"]) - math.log(1 + min_c)) / (
                     math.log(1 + max_c) - math.log(1 + min_c)
                 )
@@ -225,16 +250,16 @@ class KyivRiskEngine:
 
             # Strategic Infrastructure & target density bonus: up to 18 pts
             infra_weights = {
-                "Шевченківський": 16.0,  # ДАХК «Артем», ДержККБ «Луч», Охматдит, Телевежа, КМДА
-                "Оболонський": 16.5,     # Київська ГЕС/дамба, ПС «Північна», Північний міст, «Маяк»
-                "Голосіївський": 17.0,   # ТЕЦ-5, ПС «Новокиївська», нафтобаза Корчувате
-                "Дарницький": 15.0,      # ПС «Позняки», Дарницький вокзал, нафтохаб Бортничі, Південний міст
-                "Подільський": 11.0,     # ПС «Північна», Куренівська промзона, Фармак
-                "Святошинський": 10.0,   # ДП «Антонов» (Святошинський авіакомплекс)
-                "Солом'янський": 11.5,   # Вокзал, аеропорт Жуляни, МОУ / Генштаб
-                "Деснянський": 8.0,      # ТЕЦ-6, Деснянська водопровідна станція
-                "Дніпровський": 5.0,     # Дарницька ТЕЦ, депо «Дарниця»
-                "Печерський": 5.0,       # Урядовий квартал (високий ешелон захисту Patriot/ППО)
+                "Солом'янський": 17.0,  # Вокзал, Жуляни, МОУ / Генштаб, хаб «Шайба», ПС «Вокзальна»
+                "Голосіївський": 17.5,   # ТЕЦ-5, ПС «Новокиївська», нафтобаза Корчувате, Kärcher, ППО «Південь»
+                "Оболонський": 17.0,     # Київська ГЕС, Північний міст, ПС «Оболонь», ПММ Богатирська, човнова база, ППО «Північ»
+                "Дарницький": 15.5,      # ПС «Позняки», Дарницький вокзал, нафтохаб Бортничі, Південний міст
+                "Шевченківський": 16.5,  # ДАХК «Артем», ДержККБ «Луч», Охматдит, Телевежа, «Київстар», Довженка, КМДА
+                "Подільський": 12.5,     # ПС «Північна», Куренівська промзона, «Фармак», Виноградар
+                "Святошинський": 13.0,   # ДП «Антонов» (Святошинський авіакомплекс), ППО «Захід»
+                "Деснянський": 9.5,      # ТЕЦ-6, Деснянська водопровідна станція
+                "Дніпровський": 8.5,     # Дарницька ТЕЦ, депо «Дарниця», Комфорт Таун, мости
+                "Печерський": 7.5,       # Урядовий квартал, Військовий госпіталь (ешелон Patriot/ППО)
             }
             infra_pts = infra_weights.get(d, 8.0)
 

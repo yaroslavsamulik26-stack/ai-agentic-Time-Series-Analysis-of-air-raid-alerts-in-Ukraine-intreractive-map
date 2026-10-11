@@ -665,6 +665,177 @@
         "vuln_red": 30,
         "description": "Критичне підприємство національного виробництва життєво необхідних ліків."
       }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          30.457,
+          50.463
+        ]
+      },
+      "properties": {
+        "id": "comms_kyivstar_hq",
+        "name": "Технологічний центр «Київстар» (Дегтярівська)",
+        "category": "admin",
+        "district": "Шевченківський",
+        "vuln_yellow": 30,
+        "vuln_red": 36,
+        "description": "Ключовий комунікаційний хаб та технологічний центр національного оператора зв'язку; уражений у вересні 2026."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          30.443,
+          50.4575
+        ]
+      },
+      "properties": {
+        "id": "cult_dovzhenko_film_studios",
+        "name": "Національна кіностудія ім. О. Довженка",
+        "category": "admin",
+        "district": "Шевченківський",
+        "vuln_yellow": 28,
+        "vuln_red": 32,
+        "description": "Історичний комплекс кіновиробництва та складів; зазнав трьох окремих атак (пожежі павільйонів 30 вересня та 7 жовтня 2026)."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          30.485,
+          50.518
+        ]
+      },
+      "properties": {
+        "id": "energy_obolon_fuel_tanks",
+        "name": "Резервуарний парк ПММ «Оболонь» (Богатирська)",
+        "category": "industry",
+        "district": "Оболонський",
+        "vuln_yellow": 38,
+        "vuln_red": 34,
+        "description": "Великий резервуарний парк паливно-мастильних матеріалів; пожежа резервуарів внаслідок влучання дрона 22 вересня 2026."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          30.528,
+          50.512
+        ]
+      },
+      "properties": {
+        "id": "trans_obolon_boat_station",
+        "name": "Човнова станція та водна база Оболоні (Собаче гирло)",
+        "category": "transport",
+        "district": "Оболонський",
+        "vuln_yellow": 25,
+        "vuln_red": 28,
+        "description": "Прибережна інфраструктура на Дніпрі; прямий удар ударного БпЛА 10 жовтня 2026 з пораненням 5+ людей."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          30.548,
+          50.362
+        ]
+      },
+      "properties": {
+        "id": "ind_karcher_logistics",
+        "name": "Логістичний термінал «Kärcher» (Пирогівський шлях)",
+        "category": "industry",
+        "district": "Голосіївський",
+        "vuln_yellow": 34,
+        "vuln_red": 30,
+        "description": "Великий дистрибуційний логістичний комплекс обладнання; повністю зруйнований пожежею після атаки 27 вересня 2026."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          30.484,
+          50.4375
+        ]
+      },
+      "properties": {
+        "id": "trans_shayba_market_hub",
+        "name": "Вузловий пасажирський хаб «Шайба» / ст. Київ-Південний",
+        "category": "transport",
+        "district": "Солом'янський",
+        "vuln_yellow": 30,
+        "vuln_red": 35,
+        "description": "Привокзальний інфраструктурний комплекс; зруйнований серією ударів реактивних дронів 23 вересня 2026."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          30.515,
+          50.525
+        ]
+      },
+      "properties": {
+        "id": "defense_turrets_north",
+        "name": "Позиційний сектор ППО «Північ» (Оболонь — Дніпровське русло)",
+        "category": "defense",
+        "district": "Оболонський",
+        "vuln_yellow": 15,
+        "vuln_red": 25,
+        "description": "Рубіж мобільних вогневих груп та автоматичних зенітних турелей перехоплення реактивних Shahed на річковому коридорі."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          30.345,
+          50.456
+        ]
+      },
+      "properties": {
+        "id": "defense_turrets_west",
+        "name": "Вогневий рубіж ППО «Захід» (Святошин — Житомирська траса)",
+        "category": "defense",
+        "district": "Святошинський",
+        "vuln_yellow": 15,
+        "vuln_red": 25,
+        "description": "Передовий ешелон мобільних комплексів перехоплення низьковисотних БпЛА на західному вході до столиці."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          30.56,
+          50.398
+        ]
+      },
+      "properties": {
+        "id": "defense_turrets_south",
+        "name": "Ешелон прикриття мостів ППО «Південь» (Південний міст / Лиса Гора)",
+        "category": "defense",
+        "district": "Голосіївський",
+        "vuln_yellow": 15,
+        "vuln_red": 25,
+        "description": "Зенітно-ракетний та кулеметний комплекс захисту стратегічних переправ (Південний міст, ТЕЦ-5) від комбінованих атак."
+      }
     }
   ]
 }

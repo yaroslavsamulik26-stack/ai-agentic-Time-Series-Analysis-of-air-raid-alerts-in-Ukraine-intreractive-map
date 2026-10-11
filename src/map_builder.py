@@ -178,6 +178,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             box-shadow: 0 0 10px rgba(234, 179, 8, 0.5);
         }
 
+        .mode-btn.active[data-mode="orange"] {
+            background: #ea580c;
+            color: #ffffff;
+            box-shadow: 0 0 10px rgba(234, 88, 12, 0.5);
+        }
+
         .mode-btn.active[data-mode="red"] {
             background: #dc2626;
             color: #ffffff;
@@ -202,6 +208,32 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
         .btn-action-small:hover {
             background: rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-action-small.active {
+            background: #0284c7;
+            border-color: #38bdf8;
+            box-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
+        }
+
+        .osint-badge {
+            display: inline-block;
+            font-size: 9px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-right: 4px;
+            text-transform: uppercase;
+        }
+
+        .corridor-tooltip {
+            background: rgba(15, 23, 42, 0.95) !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            color: #f8fafc !important;
+            font-size: 11px !important;
+            padding: 6px 10px !important;
+            border-radius: 6px !important;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5) !important;
         }
 
         /* Reopen floating button */
@@ -642,6 +674,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             <button class="mode-btn" data-mode="yellow" onclick="setThreatMode('yellow')">
                 <i class="fa-solid fa-triangle-exclamation"></i> Жовтий (Шахеди)
             </button>
+            <button class="mode-btn" data-mode="orange" onclick="setThreatMode('orange')">
+                <i class="fa-solid fa-jet-fighter"></i> Реактивні БпЛА
+            </button>
             <button class="mode-btn" data-mode="red" onclick="setThreatMode('red')">
                 <i class="fa-solid fa-radiation"></i> Червоний (Ракети)
             </button>
@@ -659,6 +694,14 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 Всі (3 міс)
             </button>
         </div>
+
+        <button class="btn-action-small active" id="toggleCorridorsBtn" onclick="toggleCorridors()" title="Показати/приховати вектори підльоту БпЛА">
+            <i class="fa-solid fa-route"></i> Вектори підльоту
+        </button>
+
+        <button class="btn-action-small" onclick="openNotebookLMModal()" style="background:linear-gradient(135deg, #1e3a8a, #4338ca); border-color:#6366f1;" title="Відкрити аналітичне зведення NotebookLM">
+            <i class="fa-solid fa-book-bookmark"></i> NotebookLM OSINT
+        </button>
 
         <button class="btn-action-small" onclick="openAnalyticsModal()">
             <i class="fa-solid fa-chart-line"></i> Time Series
@@ -681,8 +724,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
         <div class="panel-tabs">
             <div class="panel-tab active" onclick="switchPanelTab('tab-districts')">Райони (10)</div>
-            <div class="panel-tab" onclick="switchPanelTab('tab-objects')">Об'єкти & Фільтри</div>
+            <div class="panel-tab" onclick="switchPanelTab('tab-objects')">Об'єкти & ППО</div>
             <div class="panel-tab" onclick="switchPanelTab('tab-incidents')">Хроніка ударів</div>
+            <div class="panel-tab" onclick="switchPanelTab('tab-notebooklm')">OSINT Зведення</div>
         </div>
 
         <div class="panel-content">
@@ -691,7 +735,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 <div class="filter-section">
                     <div class="section-title"><i class="fa-solid fa-shield-halved"></i> Рейтинг загрози районів Києва</div>
                     <p style="font-size:10px; color:var(--text-muted); margin-bottom:8px;">
-                        Включає правий та лівий берег. Клікніть на район, щоб сфокусуватись.
+                        Враховує щільність ударів, критичні об'єкти та оборонний периметр. Клікніть на район для фокусу.
                     </p>
                     <div id="districts-list">
                         <!-- Rendered by JS -->
@@ -703,7 +747,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             <div id="tab-objects" class="tab-pane">
                 <div class="filter-section">
                     <div class="section-title"><i class="fa-solid fa-filter"></i> Категорії об'єктів</div>
-                    <div class="category-filters">
+                    <div class="category-filters" style="grid-template-columns: 1fr 1fr; gap: 5px;">
                         <div class="filter-chip active" data-cat="energy" onclick="toggleCategoryFilter('energy')">
                             <i class="fa-solid fa-bolt" style="color:#eab308"></i> Енергетика
                         </div>
@@ -711,10 +755,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                             <i class="fa-solid fa-bridge" style="color:#38bdf8"></i> Мости / Транспорт
                         </div>
                         <div class="filter-chip active" data-cat="admin" onclick="toggleCategoryFilter('admin')">
-                            <i class="fa-solid fa-landmark" style="color:#a855f7"></i> Влада / КМДА
+                            <i class="fa-solid fa-landmark" style="color:#a855f7"></i> Влада / Зв'язок
                         </div>
                         <div class="filter-chip active" data-cat="industry" onclick="toggleCategoryFilter('industry')">
-                            <i class="fa-solid fa-industry" style="color:#f43f5e"></i> Оборонні заводи
+                            <i class="fa-solid fa-industry" style="color:#f43f5e"></i> ВПК / Промисловість
+                        </div>
+                        <div class="filter-chip active" data-cat="defense" onclick="toggleCategoryFilter('defense')" style="grid-column: span 2;">
+                            <i class="fa-solid fa-shield-halved" style="color:#10b981"></i> Ешелони ППО & Турелі
                         </div>
                     </div>
                 </div>
@@ -735,6 +782,34 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     </div>
                 </div>
             </div>
+
+            <!-- Tab 4: NotebookLM OSINT Summary -->
+            <div id="tab-notebooklm" class="tab-pane">
+                <div class="filter-section">
+                    <div class="section-title"><i class="fa-solid fa-brain"></i> Аналітичні висновки (100 діб атак)</div>
+                    <div style="font-size:11px; line-height:1.45; color:#cbd5e1; display:flex; flex-direction:column; gap:8px;">
+                        <div style="background:rgba(255,255,255,0.04); border:1px solid var(--border-color); border-radius:6px; padding:8px;">
+                            <div style="color:#f97316; font-weight:700; margin-bottom:2px;"><i class="fa-solid fa-jet-fighter"></i> Еволюція до реактивних дронів</div>
+                            Поява реактивних Shahed-238 та Gerbera для денних швидкісних проривів по стратегічних мостах (Південний міст, 1 жовтня 2026).
+                        </div>
+                        <div style="background:rgba(255,255,255,0.04); border:1px solid var(--border-color); border-radius:6px; padding:8px;">
+                            <div style="color:#10b981; font-weight:700; margin-bottom:2px;"><i class="fa-solid fa-crosshairs"></i> Розгортання турелей ППО</div>
+                            Встановлення понад 12 автоматизованих турельних систем для протидії реактивним БпЛА на північному та західному рубежах.
+                        </div>
+                        <div style="background:rgba(255,255,255,0.04); border:1px solid var(--border-color); border-radius:6px; padding:8px;">
+                            <div style="color:#ef4444; font-weight:700; margin-bottom:2px;"><i class="fa-solid fa-meteor"></i> Балістичні залпи високої щільності</div>
+                            Ударні серії балістики (до 40 ракет «Іскандер-М/С-400/Циркон» за 40 хв) по кластерах ВПК (Артем, Луч, Антонов).
+                        </div>
+                        <div style="background:rgba(255,255,255,0.04); border:1px solid var(--border-color); border-radius:6px; padding:8px;">
+                            <div style="color:#38bdf8; font-weight:700; margin-bottom:2px;"><i class="fa-solid fa-route"></i> Вектори прориву над водою</div>
+                            Русло Дніпра (Оболонь — Вишгород) слугує ключовим нічним коридором для обходу стаціонарних радіолокаційних постів.
+                        </div>
+                        <button onclick="openNotebookLMModal()" style="background:#0284c7; color:#fff; border:none; border-radius:6px; padding:6px; font-size:11px; font-weight:600; cursor:pointer; margin-top:4px;">
+                            <i class="fa-solid fa-file-lines"></i> Відкрити повний OSINT-документ
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -746,13 +821,91 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
     <!-- Legend Overlay -->
     <div class="map-legend">
-        <div style="font-weight:700; margin-bottom:2px; color:#cbd5e1;">Рівень небезпеки:</div>
+        <div style="font-weight:700; margin-bottom:2px; color:#cbd5e1;">Рівень небезпеки районів:</div>
         <div class="legend-item"><div class="legend-color" style="background:#dc2626;"></div> 75-100: Критичний ризик</div>
         <div class="legend-item"><div class="legend-color" style="background:#ea580c;"></div> 60-74: Високий ризик</div>
         <div class="legend-item"><div class="legend-color" style="background:#eab308;"></div> 45-59: Підвищений ризик</div>
-        <div class="legend-item"><div class="legend-color" style="background:#10b981;"></div> 0-44: Відносно помірний ризик</div>
-        <div style="margin-top:4px; border-top:1px solid rgba(255,255,255,0.1); padding-top:4px;">
-            <i class="fa-solid fa-location-crosshairs" style="color:#f43f5e"></i> Уламки / прильоти (3 міс)
+        <div class="legend-item"><div class="legend-color" style="background:#10b981;"></div> 0-44: Помірний ризик</div>
+        <div style="margin-top:4px; border-top:1px solid rgba(255,255,255,0.1); padding-top:4px; display:flex; flex-direction:column; gap:3px;">
+            <div class="legend-item"><i class="fa-solid fa-circle" style="color:#eab308; font-size:9px;"></i> Шахед (поршневий)</div>
+            <div class="legend-item"><i class="fa-solid fa-circle" style="color:#f97316; font-size:9px;"></i> Реактивний БпЛА (Jet)</div>
+            <div class="legend-item"><i class="fa-solid fa-circle" style="color:#ef4444; font-size:9px;"></i> Балістика / Ракета</div>
+            <div class="legend-item"><i class="fa-solid fa-shield-halved" style="color:#10b981; font-size:10px;"></i> Ешелон ППО & турелі</div>
+            <div class="legend-item"><i class="fa-solid fa-route" style="color:#38bdf8; font-size:10px;"></i> Вектор підльоту БпЛА</div>
+        </div>
+    </div>
+
+    <!-- NotebookLM OSINT Briefing Modal -->
+    <div id="notebooklmModal" class="analytics-modal">
+        <div class="modal-card" style="max-width:850px;">
+            <div class="modal-header">
+                <div>
+                    <h2 style="font-size:18px; font-weight:700; display:flex; align-items:center; gap:8px;">
+                        <i class="fa-solid fa-book-bookmark" style="color:#818cf8;"></i> NotebookLM Defense Intel Briefing
+                    </h2>
+                    <p style="font-size:11px; color:var(--text-muted);">
+                        Хроніка повітряних атак по Києву за липень — жовтень 2026 р. Верифікація за зведеннями КМВА, ДСНС та OSINT.
+                    </p>
+                </div>
+                <button class="btn-close" onclick="closeNotebookLMModal()">&times;</button>
+            </div>
+
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-val" style="color:#38bdf8;" id="modal-nblm-total">770</div>
+                    <div class="metric-label">Верифікованих подій</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-val" style="color:#f97316;">15</div>
+                    <div class="metric-label">Атак реактивних БпЛА</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-val" style="color:#ef4444;">28</div>
+                    <div class="metric-label">Балістичних / крилатих ударів</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-val" style="color:#10b981;">12+</div>
+                    <div class="metric-label">Розгорнутих турелей ППО</div>
+                </div>
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:10px;">
+                <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:8px; padding:12px;">
+                    <h3 style="font-size:13px; font-weight:700; color:#f97316; margin-bottom:6px;">
+                        <i class="fa-solid fa-jet-fighter"></i> 1. Тактичний зсув: перехід до швидкісних реактивних Shahed-238
+                    </h3>
+                    <p style="font-size:12px; line-height:1.5; color:#cbd5e1;">
+                        З кінця вересня 2026 противник змінив тактику, поєднавши традиційні нічні рої повільних дронів з денними ударами <b>реактивних БпЛА (швидкість до 500 км/год)</b>. Основні цілі — відкриті транспортні артерії (удар по опорах Південного мосту 1 жовтня, удари біля Північного мосту 3-4 жовтня) та пасажирські термінали (вузол «Шайба» біля Центрального вокзалу).
+                    </p>
+                </div>
+
+                <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:8px; padding:12px;">
+                    <h3 style="font-size:13px; font-weight:700; color:#10b981; margin-bottom:6px;">
+                        <i class="fa-solid fa-shield-halved"></i> 2. Розгортання автоматизованих турельних рубежів ППО
+                    </h3>
+                    <p style="font-size:12px; line-height:1.5; color:#cbd5e1;">
+                        Для парирування швидкісних реактивних цілей на річкових коридорах (русло Дніпра, Оболонь — Вишгород) та західних підходах (Святошин — Житомирська траса) столицю насичено автоматичними зенітними турелями та мобільними вогневими групами із тепловізійним автосупроводом.
+                    </p>
+                </div>
+
+                <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:8px; padding:12px;">
+                    <h3 style="font-size:13px; font-weight:700; color:#ef4444; margin-bottom:6px;">
+                        <i class="fa-solid fa-meteor"></i> 3. Концентровані балістичні залпи на виснаження перехоплювачів
+                    </h3>
+                    <p style="font-size:12px; line-height:1.5; color:#cbd5e1;">
+                        Зафіксовано тактику залпового випуску балістичних ракет різних траєкторій (Іскандер-М, С-400, протикорабельні «Циркон» та північнокорейські KN-23) — до 40 цілей упродовж 40 хвилин. Основний фокус: авіабудівні та ракетні заводи (ДАХК «Артем», ДП «Луч», ДП «Антонов»).
+                    </p>
+                </div>
+
+                <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:8px; padding:12px;">
+                    <h3 style="font-size:13px; font-weight:700; color:#38bdf8; margin-bottom:6px;">
+                        <i class="fa-solid fa-database"></i> 4. Локальне джерело даних та інтеграція
+                    </h3>
+                    <p style="font-size:12px; line-height:1.5; color:#cbd5e1;">
+                        Дані структуровано з 99 420 повідомлень 6 моніторингових Telegram-каналів. Підготовлено повний експорт для аналітичної моделі: <code style="color:#38bdf8;">data/raw/osint/kyiv_defense_intel_for_notebooklm.md</code>.
+                    </p>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -827,9 +980,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         const DISTRICTS_GEOJSON = {{ districts_geojson_json }};
 
         // State
-        let currentThreatMode = 'all'; // 'all', 'yellow', 'red'
+        let currentThreatMode = 'all'; // 'all', 'yellow', 'orange', 'red'
         let currentTimeRange = '7d';   // Default to last 7 days!
-        let activeCategories = new Set(['energy', 'transport', 'admin', 'industry']);
+        let activeCategories = new Set(['energy', 'transport', 'admin', 'industry', 'defense']);
 
         function getCutoffDate(rangeKey) {
             if (rangeKey === 'all') return null;
@@ -892,8 +1045,81 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
         // Layer Groups
         let districtsLayerGroup = L.layerGroup().addTo(map);
+        let corridorsLayerGroup = L.layerGroup().addTo(map);
         let objectsLayerGroup = L.layerGroup().addTo(map);
         let incidentsLayerGroup = L.layerGroup().addTo(map);
+
+        // Inbound Attack Corridors (from 100-day OSINT Intel)
+        const THREAT_CORRIDORS = [
+            {
+                name: "Північний річковий вектор (Вишгород — Оболонь — Дніпро)",
+                coords: [[50.60, 30.48], [50.53, 30.50], [50.49, 30.53], [50.46, 30.54]],
+                color: "#38bdf8",
+                desc: "Нічний низьковисотний коридор прориву вздовж русла Дніпра для обходу РЛС."
+            },
+            {
+                name: "Західний сектор (Макарів — Житомирська траса — Святошин)",
+                coords: [[50.47, 30.05], [50.45, 30.22], [50.45, 30.37], [50.45, 30.40]],
+                color: "#f97316",
+                desc: "Вектор підльоту реактивних Shahed-238 та балістики на авіаційні кластери."
+            },
+            {
+                name: "Південний вектор (Обухів — Козин — Корчувате — Голосіїв)",
+                coords: [[50.15, 30.65], [50.28, 30.58], [50.35, 30.56], [50.39, 30.54]],
+                color: "#a855f7",
+                desc: "Коридор підльоту з півдня до логістичних вузлів та Південного мосту."
+            },
+            {
+                name: "Південно-східний вектор (Бориспіль — Бортничі — Дарниця)",
+                coords: [[50.35, 30.95], [50.37, 30.75], [50.40, 30.65], [50.42, 30.60]],
+                color: "#ef4444",
+                desc: "Східний ешелон підльоту через Бориспіль до ТЕЦ-4 та залізничних вузлів Лівого берега."
+            },
+            {
+                name: "Північно-східний вектор (Чернігівський напрямок — Бровари — Деснянський)",
+                coords: [[50.58, 30.90], [50.53, 30.78], [50.50, 30.65], [50.50, 30.58]],
+                color: "#eab308",
+                desc: "Вектор підльоту роїв БпЛА з північного сходу на ТЕЦ-6 та лівобережні підстанції."
+            }
+        ];
+
+        let corridorsVisible = true;
+
+        function renderCorridors() {
+            corridorsLayerGroup.clearLayers();
+            if (!corridorsVisible) return;
+
+            THREAT_CORRIDORS.forEach(c => {
+                const polyline = L.polyline(c.coords, {
+                    color: c.color,
+                    weight: 3.5,
+                    opacity: 0.85,
+                    dashArray: '8, 8'
+                });
+                polyline.bindTooltip(`<b>${c.name}</b><br>${c.desc}`, {
+                    className: 'corridor-tooltip',
+                    sticky: true
+                });
+                corridorsLayerGroup.addLayer(polyline);
+
+                const endPoint = c.coords[c.coords.length - 1];
+                const arrowMarker = L.circleMarker(endPoint, {
+                    radius: 5,
+                    fillColor: c.color,
+                    color: '#fff',
+                    weight: 1.5,
+                    fillOpacity: 1
+                });
+                corridorsLayerGroup.addLayer(arrowMarker);
+            });
+        }
+
+        function toggleCorridors() {
+            corridorsVisible = !corridorsVisible;
+            const btn = document.getElementById('toggleCorridorsBtn');
+            if (btn) btn.classList.toggle('active', corridorsVisible);
+            renderCorridors();
+        }
 
         function getScoreColor(score) {
             if (score >= 75) return '#dc2626'; // Red / Critical
@@ -908,6 +1134,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 case 'transport': return 'fa-bridge';
                 case 'admin': return 'fa-landmark';
                 case 'industry': return 'fa-industry';
+                case 'defense': return 'fa-shield-halved';
                 default: return 'fa-location-dot';
             }
         }
@@ -985,10 +1212,24 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             RISK_DATA.objects.forEach(obj => {
                 if (!activeCategories.has(obj.category)) return;
 
-                const scoreObj = obj.scores[currentThreatMode];
+                const isDefense = obj.category === 'defense';
+                const scoreObj = obj.scores[currentThreatMode] || obj.scores['all'];
                 const score = scoreObj.score;
                 const tier = scoreObj.tier;
-                const color = getScoreColor(score);
+                const color = isDefense ? '#10b981' : getScoreColor(score);
+
+                if (isDefense) {
+                    const defenseCircle = L.circle([obj.lat, obj.lon], {
+                        radius: 3500,
+                        color: '#10b981',
+                        weight: 1.5,
+                        dashArray: '6, 6',
+                        fillColor: '#10b981',
+                        fillOpacity: 0.08,
+                        interactive: false
+                    });
+                    objectsLayerGroup.addLayer(defenseCircle);
+                }
 
                 const iconHtml = `
                     <div style="background:${color}; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:white; border:2px solid white; box-shadow:0 3px 8px rgba(0,0,0,0.4);">
@@ -996,24 +1237,34 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     </div>
                 `;
 
+                const pulseClass = isDefense ? '' : (
+                    (currentThreatMode === 'red' && score >= 75) ? 'pulse-marker-red' :
+                    (currentThreatMode === 'yellow' && score >= 75 ? 'pulse-marker-yellow' : '')
+                );
+
                 const customIcon = L.divIcon({
                     html: iconHtml,
-                    className: (currentThreatMode === 'red' && score >= 75) ? 'pulse-marker-red' : (currentThreatMode === 'yellow' && score >= 75 ? 'pulse-marker-yellow' : ''),
+                    className: pulseClass,
                     iconSize: [28, 28],
                     iconAnchor: [14, 14]
                 });
 
                 const marker = L.marker([obj.lat, obj.lon], { icon: customIcon });
 
+                const scoreLabel = isDefense ? 'Індекс активності ППО:' : 'Індекс небезпеки:';
+                const statusLabel = isDefense ?
+                    `Статус: <b style="color:#10b981;">Активний сектор перехоплення</b>` :
+                    `Статус: <b style="color:${color};">${tier}</b> | Близькість до уламків: +${scoreObj.proximity} б.`;
+
                 const popupContent = `
                     <div class="popup-title">${obj.name}</div>
                     <div class="popup-cat"><i class="fa-solid ${getCategoryIcon(obj.category)}"></i> ${obj.category.toUpperCase()} • ${obj.district}</div>
                     <div class="popup-score-box">
-                        <span style="font-size:11px; color:#cbd5e1;">Індекс небезпеки:</span>
+                        <span style="font-size:11px; color:#cbd5e1;">${scoreLabel}</span>
                         <span class="popup-score-num" style="color:${color};">${score}/100</span>
                     </div>
                     <div style="font-size:10px; margin-bottom:6px; color:#94a3b8;">
-                        Статус: <b style="color:${color};">${tier}</b> | Близькість до уламків: +${scoreObj.proximity} б.
+                        ${statusLabel}
                     </div>
                     <div class="popup-desc">${obj.description}</div>
                 `;
@@ -1031,6 +1282,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
             INCIDENTS_DATA.forEach(inc => {
                 if (currentThreatMode === 'yellow' && inc.alert_level !== 'yellow') return;
+                if (currentThreatMode === 'orange' && inc.alert_level !== 'orange') return;
                 if (currentThreatMode === 'red' && inc.alert_level !== 'red') return;
 
                 if (cutoff) {
@@ -1039,8 +1291,16 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 }
                 count++;
 
-                const isDrone = inc.threat_type === 'drone_shahed';
-                const incColor = isDrone ? '#f59e0b' : '#f43f5e';
+                let incColor = '#eab308';
+                if (inc.threat_type === 'drone_jet' || inc.alert_level === 'orange') {
+                    incColor = '#f97316';
+                } else if (inc.threat_type === 'missile_ballistic') {
+                    incColor = '#ef4444';
+                } else if (inc.threat_type === 'missile_cruise') {
+                    incColor = '#ec4899';
+                } else if (inc.alert_level === 'red') {
+                    incColor = '#ef4444';
+                }
 
                 const incidentIcon = L.divIcon({
                     html: `<div style="background:${incColor}; width:13px; height:13px; border-radius:50%; border:2px solid #ffffff; box-shadow:0 0 6px ${incColor};"></div>`,
@@ -1142,8 +1402,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             container.innerHTML = '';
             const filtered = RISK_DATA.objects.filter(o => activeCategories.has(o.category));
             filtered.forEach(obj => {
-                const score = obj.scores[currentThreatMode].score;
-                const color = getScoreColor(score);
+                const isDefense = obj.category === 'defense';
+                const scoreObj = obj.scores[currentThreatMode] || obj.scores['all'];
+                const score = scoreObj.score;
+                const color = isDefense ? '#10b981' : getScoreColor(score);
                 const card = document.createElement('div');
                 card.className = 'stat-card';
                 card.onclick = () => map.flyTo([obj.lat, obj.lon], 15);
@@ -1168,6 +1430,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
             INCIDENTS_DATA.forEach(inc => {
                 if (currentThreatMode === 'yellow' && inc.alert_level !== 'yellow') return;
+                if (currentThreatMode === 'orange' && inc.alert_level !== 'orange') return;
                 if (currentThreatMode === 'red' && inc.alert_level !== 'red') return;
 
                 if (cutoff) {
@@ -1177,6 +1440,19 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 displayCount++;
                 if (displayCount > 60) return; // keep side list responsive
 
+                let badgeColor = '#cbd5e1';
+                let badgeBg = '#334155';
+                if (inc.threat_type === 'drone_jet' || inc.alert_level === 'orange') {
+                    badgeColor = '#f97316';
+                    badgeBg = '#f9731622';
+                } else if (inc.alert_level === 'red') {
+                    badgeColor = '#ef4444';
+                    badgeBg = '#ef444422';
+                } else if (inc.alert_level === 'yellow') {
+                    badgeColor = '#eab308';
+                    badgeBg = '#eab30822';
+                }
+
                 const card = document.createElement('div');
                 card.className = 'stat-card';
                 card.onclick = () => map.flyTo([inc.lat, inc.lon], 15);
@@ -1185,7 +1461,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                         <h4>${inc.district}</h4>
                         <p>${inc.datetime.split(' ')[0]} • ${inc.location_hint}</p>
                     </div>
-                    <span style="font-size:10px; padding:2px 6px; border-radius:4px; background:#334155; color:#cbd5e1;">
+                    <span style="font-size:10px; padding:2px 6px; border-radius:4px; background:${badgeBg}; color:${badgeColor}; border:1px solid ${badgeColor}44; font-weight:600;">
                         ${inc.threat_type.replace('drone_', '').replace('missile_', '')}
                     </span>
                 `;
@@ -1197,7 +1473,16 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             }
         }
 
-        // Modal
+        // NotebookLM OSINT Modal
+        function openNotebookLMModal() {
+            document.getElementById('notebooklmModal').classList.add('open');
+        }
+
+        function closeNotebookLMModal() {
+            document.getElementById('notebooklmModal').classList.remove('open');
+        }
+
+        // Analytics Modal
         function openAnalyticsModal() {
             document.getElementById('analyticsModal').classList.add('open');
             renderHourlyChart();
@@ -1265,6 +1550,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
         // Initial Boot
         renderDistrictsPolygons();
+        renderCorridors();
         renderObjects();
         renderIncidents();
         renderDistrictsList();
