@@ -19,12 +19,21 @@ from sklearn.metrics import brier_score_loss, roc_auc_score, accuracy_score, pre
 class KyivAlertTimeSeriesAnalyzer:
     def __init__(self, data_path: Path | str | None = None):
         if data_path is None:
-            data_path = (
+            processed_path = (
                 Path(__file__).resolve().parent.parent
                 / "data"
-                / "curated"
-                / "kyiv_alerts_timeseries.csv"
+                / "processed"
+                / "alerts_unified.csv"
             )
+            if processed_path.exists():
+                data_path = processed_path
+            else:
+                data_path = (
+                    Path(__file__).resolve().parent.parent
+                    / "data"
+                    / "curated"
+                    / "kyiv_alerts_timeseries.csv"
+                )
         self.data_path = Path(data_path)
         self.raw_df = pd.DataFrame()
         self.hourly_grid = pd.DataFrame()

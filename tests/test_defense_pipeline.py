@@ -47,10 +47,10 @@ class TestKyivDefensePipeline(unittest.TestCase):
 
     def test_threat_type_classification(self):
         """Test classification of drone_jet, drone_shahed, missile_ballistic, missile_cruise."""
-        # Jet drone
+        # Jet drone (unified with drone_shahed per tactical directive)
         t_jet, lvl_jet = self.parser.classify_threat("Атака реактивного шахеда Shahed-238 на міст")
-        self.assertEqual(t_jet, "drone_jet")
-        self.assertEqual(lvl_jet, "orange")
+        self.assertEqual(t_jet, "drone_shahed")
+        self.assertEqual(lvl_jet, "yellow")
 
         # Piston drone
         t_shahed, lvl_shahed = self.parser.classify_threat("Рух групи ударних БпЛА шахед з півночі")
@@ -76,10 +76,10 @@ class TestKyivDefensePipeline(unittest.TestCase):
         self.assertEqual(t_deb, "missile_cruise")
         self.assertEqual(lvl_deb, "red")
 
-        # Shahed-238 (Jet) without 'реактивний' keyword
+        # Shahed-238 (Jet) unified with drone_shahed
         t_s238, lvl_s238 = self.parser.classify_threat("Зафіксовано рух швидкісного Shahed-238")
-        self.assertEqual(t_s238, "drone_jet")
-        self.assertEqual(lvl_s238, "orange")
+        self.assertEqual(t_s238, "drone_shahed")
+        self.assertEqual(lvl_s238, "yellow")
 
         # Kinzhal / Ballistic variants
         t_kz, lvl_kz = self.parser.classify_threat("Пуск кинжал по урядовому кварталу")
@@ -113,11 +113,10 @@ class TestKyivDefensePipeline(unittest.TestCase):
         self.assertTrue((df["lat"] >= 50.1).all() and (df["lat"] <= 50.7).all(), "Latitude out of Kyiv bounds")
         self.assertTrue((df["lon"] >= 30.0).all() and (df["lon"] <= 31.0).all(), "Longitude out of Kyiv bounds")
 
-        # Alert level distribution check
+        # Alert level distribution check (Unified Shahed = yellow, Missiles = red)
         alert_levels = set(df["alert_level"].unique())
         self.assertIn("yellow", alert_levels)
         self.assertIn("red", alert_levels)
-        self.assertIn("orange", alert_levels)
 
         # Verified significant missile presence
         red_count = (df["alert_level"] == "red").sum()

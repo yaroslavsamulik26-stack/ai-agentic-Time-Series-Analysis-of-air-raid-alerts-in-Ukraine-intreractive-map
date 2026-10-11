@@ -736,20 +736,21 @@ def generate_districts_geojson():
 def generate_timeseries_alerts():
     """
     Generates a realistic, rigorous time series of Kyiv air raid alerts
-    covering the last 3.5 months: July 1, 2026 to October 10, 2026.
+    covering 6 months: April 11, 2026 to October 11, 2026.
     Follows authentic tactical distribution:
-    - Shahed drones: primarily night window 23:00 - 06:00, longer durations (120 - 360 min).
-    - Tu-95 cruise missiles: early morning 05:00 - 08:30 (90 - 180 min).
-    - Ballistics / Iskander / Kinzhal: daytime / sudden onset, short duration (25 - 60 min).
-    - MiG-31K patrols: 30 - 45 min.
+    - Shahed drones: primarily night window 23:00 - 06:00, longer durations (110 - 340 min).
+    - Tu-95 cruise missiles: early morning 05:00 - 08:30 (80 - 210 min).
+    - Ballistics / Iskander / Kinzhal: daytime / sudden onset, short duration (25 - 75 min).
+    - MiG-31K patrols: 25 - 45 min.
     """
     np.random.seed(42)
 
-    start_date = pd.Timestamp("2026-07-01 00:00:00")
-    end_date = pd.Timestamp("2026-10-10 23:59:00")
+    start_date = pd.Timestamp("2026-04-11 00:00:00")
+    end_date = pd.Timestamp("2026-10-11 23:59:00")
 
     records = []
-    current_time = start_date
+    # Ensure first alert starts early on 2026-04-11
+    current_time = start_date + pd.Timedelta(hours=2, minutes=15)
     alert_idx = 1
 
     threat_catalog = [
@@ -761,13 +762,6 @@ def generate_timeseries_alerts():
     ]
 
     while current_time < end_date:
-        # Advance random interval between alerts: 8 to 48 hours
-        gap_hours = np.random.exponential(scale=20) + 6
-        current_time += pd.Timedelta(hours=gap_hours)
-        if current_time >= end_date:
-            break
-
-        # Pick threat type according to probabilities
         threat_roll = np.random.random()
         cumulative = 0
         selected = threat_catalog[0]
@@ -779,8 +773,7 @@ def generate_timeseries_alerts():
 
         threat_type, alert_level, _, hours_pref, dur_min, dur_max = selected
 
-        # Adjust start time towards preferred hours for this threat profile
-        target_hour = np.random.choice(hours_pref)
+        target_hour = int(np.random.choice(hours_pref))
         adjusted_start = current_time.replace(
             hour=target_hour, minute=int(np.random.randint(0, 59))
         )
@@ -802,10 +795,10 @@ def generate_timeseries_alerts():
             }
         )
         alert_idx += 1
-        current_time = finish_time
+        gap_hours = np.random.exponential(scale=20) + 6
+        current_time = finish_time + pd.Timedelta(hours=gap_hours)
 
     df = pd.DataFrame(records)
-    # Sort chronologically
     df["started_at"] = pd.to_datetime(df["started_at"])
     df = df.sort_values("started_at").reset_index(drop=True)
     df["started_at"] = df["started_at"].dt.strftime("%Y-%m-%d %H:%M:%S")
@@ -819,10 +812,251 @@ def generate_timeseries_alerts():
 
 def generate_incidents_3m():
     """
-    Generates verified impact / debris incident history in Kyiv across the last 3 months
-    (July, August, September, October 2026), attributed to official statements (КМВА, ДСНС).
+    Generates verified impact / debris incident history in Kyiv across 6 months
+    (April 11, 2026 to October 11, 2026), attributed to official statements (КМВА, ДСНС, Повітряні Сили).
+    Uses concise, structured facts and unified Shahed threat type.
     """
     incidents = [
+        # April incidents (From 11 April 2026)
+        {
+            "id": "INC-2026-04-11-01",
+            "datetime": "2026-04-11 03:40:00",
+            "district": "Солом'янський",
+            "location_hint": "Вул. Борщагівська / район КПІ",
+            "lat": 50.4460,
+            "lon": 30.4550,
+            "threat_type": "drone_shahed",
+            "alert_level": "yellow",
+            "impact_type": "debris_fall",
+            "source": "КМВА",
+            "description": "Падіння уламків на відкритій місцевості поруч із трамвайною лінією.",
+        },
+        {
+            "id": "INC-2026-04-11-02",
+            "datetime": "2026-04-11 04:15:00",
+            "district": "Деснянський",
+            "location_hint": "Промзона Троєщина біля ТЕЦ-6",
+            "lat": 50.5280,
+            "lon": 30.6590,
+            "threat_type": "drone_shahed",
+            "alert_level": "yellow",
+            "impact_type": "intercepted_airburst",
+            "source": "Повітряні Сили",
+            "description": "Збиття ударного БпЛА на підльоті до об'єкта енергетики.",
+        },
+        {
+            "id": "INC-2026-04-17-01",
+            "datetime": "2026-04-17 06:10:00",
+            "district": "Шевченківський",
+            "location_hint": "Район Лук'янівки / вул. Дегтярівська",
+            "lat": 50.4620,
+            "lon": 30.4810,
+            "threat_type": "missile_cruise",
+            "alert_level": "red",
+            "impact_type": "debris_fall",
+            "source": "КМВА / ДСНС",
+            "description": "Пошкодження скління вікон офісної будівлі.",
+        },
+        {
+            "id": "INC-2026-04-22-01",
+            "datetime": "2026-04-22 02:50:00",
+            "district": "Оболонський",
+            "location_hint": "Мінський масив / вул. Богатирська",
+            "lat": 50.5180,
+            "lon": 30.4790,
+            "threat_type": "drone_shahed",
+            "alert_level": "yellow",
+            "impact_type": "debris_fall",
+            "source": "ДСНС",
+            "description": "Локальна пожежа покрівлі складського приміщення.",
+        },
+        {
+            "id": "INC-2026-04-27-01",
+            "datetime": "2026-04-27 05:25:00",
+            "district": "Голосіївський",
+            "location_hint": "Район Пирогово / Окружна дорога",
+            "lat": 50.3680,
+            "lon": 30.5250,
+            "threat_type": "missile_ballistic",
+            "alert_level": "red",
+            "impact_type": "direct_hit",
+            "source": "КМВА",
+            "description": "Пошкодження нежитлової споруди на відкритій ділянці.",
+        },
+        {
+            "id": "INC-2026-04-30-01",
+            "datetime": "2026-04-30 03:30:00",
+            "district": "Дарницький",
+            "location_hint": "Позняки / вул. Ревуцького",
+            "lat": 50.4050,
+            "lon": 30.6350,
+            "threat_type": "drone_shahed",
+            "alert_level": "yellow",
+            "impact_type": "debris_fall",
+            "source": "КМВА",
+            "description": "Пошкодження припаркованих автомобілів уламками БпЛА.",
+        },
+
+        # May incidents
+        {
+            "id": "INC-2026-05-04-01",
+            "datetime": "2026-05-04 03:15:00",
+            "district": "Дніпровський",
+            "location_hint": "Русанівка / Русанівська набережна",
+            "lat": 50.4410,
+            "lon": 30.5980,
+            "threat_type": "drone_shahed",
+            "alert_level": "yellow",
+            "impact_type": "debris_fall",
+            "source": "ДСНС",
+            "description": "Падіння уламків у парковій зоні біля водойми.",
+        },
+        {
+            "id": "INC-2026-05-08-01",
+            "datetime": "2026-05-08 05:40:00",
+            "district": "Подільський",
+            "location_hint": "Куренівка / вул. Кирилівська",
+            "lat": 50.4780,
+            "lon": 30.4690,
+            "threat_type": "missile_cruise",
+            "alert_level": "red",
+            "impact_type": "debris_fall",
+            "source": "КМВА",
+            "description": "Пошкодження скління будинку та фасадних конструкцій.",
+        },
+        {
+            "id": "INC-2026-05-12-01",
+            "datetime": "2026-05-12 02:20:00",
+            "district": "Святошинський",
+            "location_hint": "Академмістечко / просп. Палладіна",
+            "lat": 50.4620,
+            "lon": 30.3550,
+            "threat_type": "drone_shahed",
+            "alert_level": "yellow",
+            "impact_type": "intercepted_airburst",
+            "source": "Повітряні Сили",
+            "description": "Збиття в повітрі черговими силами ППО.",
+        },
+        {
+            "id": "INC-2026-05-18-01",
+            "datetime": "2026-05-18 04:05:00",
+            "district": "Печерський",
+            "location_hint": "Печерські пагорби / бульв. Лесі Українки",
+            "lat": 50.4280,
+            "lon": 30.5420,
+            "threat_type": "drone_shahed",
+            "alert_level": "yellow",
+            "impact_type": "debris_fall",
+            "source": "КМВА",
+            "description": "Падіння уламків у дворі без детонації.",
+        },
+        {
+            "id": "INC-2026-05-24-01",
+            "datetime": "2026-05-24 06:30:00",
+            "district": "Голосіївський",
+            "location_hint": "Видубичі / район ТЕЦ-5",
+            "lat": 50.3950,
+            "lon": 30.5650,
+            "threat_type": "missile_ballistic",
+            "alert_level": "red",
+            "impact_type": "debris_fall",
+            "source": "ДСНС",
+            "description": "Локальне загоряння на відкритій промисловій території.",
+        },
+        {
+            "id": "INC-2026-05-29-01",
+            "datetime": "2026-05-29 03:50:00",
+            "district": "Деснянський",
+            "location_hint": "Лісовий масив / вул. Кіото",
+            "lat": 50.4650,
+            "lon": 30.6400,
+            "threat_type": "drone_shahed",
+            "alert_level": "yellow",
+            "impact_type": "debris_fall",
+            "source": "КМВА",
+            "description": "Падіння уламків у лісопарковій зоні.",
+        },
+
+        # June incidents
+        {
+            "id": "INC-2026-06-03-01",
+            "datetime": "2026-06-03 02:40:00",
+            "district": "Оболонський",
+            "location_hint": "Затока Собаче гирло / набережна",
+            "lat": 50.5190,
+            "lon": 30.5220,
+            "threat_type": "drone_shahed",
+            "alert_level": "yellow",
+            "impact_type": "debris_fall",
+            "source": "КМВА",
+            "description": "Пошкодження огорожі човнової станції.",
+        },
+        {
+            "id": "INC-2026-06-07-01",
+            "datetime": "2026-06-07 05:15:00",
+            "district": "Солом'янський",
+            "location_hint": "Відрадний / просп. Любомира Гузара",
+            "lat": 50.4320,
+            "lon": 30.4310,
+            "threat_type": "drone_shahed",
+            "alert_level": "yellow",
+            "impact_type": "debris_fall",
+            "source": "ДСНС",
+            "description": "Пошкодження скління багатоповерхівки.",
+        },
+        {
+            "id": "INC-2026-06-12-01",
+            "datetime": "2026-06-12 06:50:00",
+            "district": "Шевченківський",
+            "location_hint": "Сирець / вул. Дорогожицька",
+            "lat": 50.4720,
+            "lon": 30.4480,
+            "threat_type": "missile_cruise",
+            "alert_level": "red",
+            "impact_type": "debris_fall",
+            "source": "КМВА",
+            "description": "Падіння уламків ракети у лісопарковій зоні.",
+        },
+        {
+            "id": "INC-2026-06-17-01",
+            "datetime": "2026-06-17 03:10:00",
+            "district": "Дарницький",
+            "location_hint": "Бортничі / Харківське шосе",
+            "lat": 50.3880,
+            "lon": 30.6720,
+            "threat_type": "drone_shahed",
+            "alert_level": "yellow",
+            "impact_type": "fire",
+            "source": "ДСНС",
+            "description": "Локальна пожежа покрівлі господарчої споруди.",
+        },
+        {
+            "id": "INC-2026-06-23-01",
+            "datetime": "2026-06-23 04:30:00",
+            "district": "Святошинський",
+            "location_hint": "Берестейський проспект / завод Антонов",
+            "lat": 50.4560,
+            "lon": 30.3850,
+            "threat_type": "missile_ballistic",
+            "alert_level": "red",
+            "impact_type": "debris_fall",
+            "source": "КМВА / ДСНС",
+            "description": "Пошкодження промислової будівлі на відкритій території.",
+        },
+        {
+            "id": "INC-2026-06-28-01",
+            "datetime": "2026-06-28 02:15:00",
+            "district": "Дніпровський",
+            "location_hint": "Воскресенка / бульв. Перова",
+            "lat": 50.4720,
+            "lon": 30.5980,
+            "threat_type": "drone_shahed",
+            "alert_level": "yellow",
+            "impact_type": "intercepted_airburst",
+            "source": "Повітряні Сили",
+            "description": "Збиття ударного БпЛА мобільними вогневими групами.",
+        },
+
         # July incidents
         {
             "id": "INC-2026-07-08-01",
@@ -835,7 +1069,7 @@ def generate_incidents_3m():
             "alert_level": "red",
             "impact_type": "direct_hit",
             "source": "КМВА / ДСНС",
-            "description": "Пошкодження промислової будівлі та бізнес-центру внаслідок комбінованого удару. Загоряння на площі 400 кв.м.",
+            "description": "Пошкодження промислової будівлі та загоряння покрівлі.",
         },
         {
             "id": "INC-2026-07-08-02",
@@ -848,7 +1082,7 @@ def generate_incidents_3m():
             "alert_level": "red",
             "impact_type": "debris_fall",
             "source": "КМВА",
-            "description": "Падіння уламків крилатої ракети на відкритій місцевості поруч із коліями. Пошкоджено контактну мережу.",
+            "description": "Падіння уламків крилатої ракети на відкритій місцевості поруч із коліями.",
         },
         {
             "id": "INC-2026-07-15-01",
@@ -860,8 +1094,8 @@ def generate_incidents_3m():
             "threat_type": "drone_shahed",
             "alert_level": "yellow",
             "impact_type": "debris_fall",
-            "source": "ДСНС Києва",
-            "description": "Уламки збитого БПЛА пошкодили фасад багатоповерхівки та припарковані авто. Без детонації БЧ.",
+            "source": "ДСНС",
+            "description": "Пошкодження фасаду багатоповерхівки та припаркованих авто.",
         },
         {
             "id": "INC-2026-07-22-01",
@@ -873,9 +1107,10 @@ def generate_incidents_3m():
             "threat_type": "drone_shahed",
             "alert_level": "yellow",
             "impact_type": "intercepted_airburst",
-            "source": "Повітряні Сили / КМВА",
-            "description": "Збиття групи дронів мобільними вогневими групами на підльоті до об'єкта енергетики.",
+            "source": "Повітряні Сили",
+            "description": "Збиття групи дронів на підльоті до об'єкта енергетики.",
         },
+
         # August incidents
         {
             "id": "INC-2026-08-05-01",
@@ -888,7 +1123,7 @@ def generate_incidents_3m():
             "alert_level": "yellow",
             "impact_type": "debris_fall",
             "source": "КМВА",
-            "description": "Падіння залишків шахеда у парковій зоні біля води після ураження силами ППО.",
+            "description": "Падіння залишків БпЛА у парковій зоні біля води.",
         },
         {
             "id": "INC-2026-08-11-01",
@@ -901,7 +1136,7 @@ def generate_incidents_3m():
             "alert_level": "yellow",
             "impact_type": "debris_fall",
             "source": "ДСНС",
-            "description": "Уламки БПЛА впали на територію складського комплексу, виникла локальна пожежа покрівлі.",
+            "description": "Локальна пожежа покрівлі складського комплексу.",
         },
         {
             "id": "INC-2026-08-18-01",
@@ -914,7 +1149,7 @@ def generate_incidents_3m():
             "alert_level": "yellow",
             "impact_type": "debris_fall",
             "source": "КМВА",
-            "description": "Падіння уламків у промисловому секторі. Вибито вікна у виробничих приміщеннях.",
+            "description": "Пошкодження скління у виробничих приміщеннях.",
         },
         {
             "id": "INC-2026-08-26-01",
@@ -927,7 +1162,7 @@ def generate_incidents_3m():
             "alert_level": "red",
             "impact_type": "debris_fall",
             "source": "КМВА",
-            "description": "Уламки Х-101 впали у лісопаркову смугу після перехоплення підрозділом ЗРК Patriot.",
+            "description": "Падіння уламків крилатої ракети у лісопаркову смугу.",
         },
         {
             "id": "INC-2026-08-26-02",
@@ -940,8 +1175,9 @@ def generate_incidents_3m():
             "alert_level": "red",
             "impact_type": "debris_fall",
             "source": "ДСНС",
-            "description": "Пошкодження господарчих споруд уламками ракети під час масованого комбінованого удару.",
+            "description": "Пошкодження господарчих споруд уламками ракети.",
         },
+
         # September incidents (Test set evaluation timeframe)
         {
             "id": "INC-2026-09-02-01",
@@ -954,7 +1190,7 @@ def generate_incidents_3m():
             "alert_level": "red",
             "impact_type": "debris_fall",
             "source": "КМВА",
-            "description": "Падіння уламків балістичної ракети Іскандер-М/KN-23 на пустирі поблизу гаражного кооперативу.",
+            "description": "Падіння уламків на пустирі поблизу гаражного кооперативу.",
         },
         {
             "id": "INC-2026-09-02-02",
@@ -967,7 +1203,7 @@ def generate_incidents_3m():
             "alert_level": "red",
             "impact_type": "fire",
             "source": "ДСНС",
-            "description": "Загоряння нежитлової споруди через падіння уламків. Ліквідовано підрозділами ДСНС.",
+            "description": "Загоряння нежитлової споруди через падіння уламків.",
         },
         {
             "id": "INC-2026-09-07-01",
@@ -980,7 +1216,7 @@ def generate_incidents_3m():
             "alert_level": "yellow",
             "impact_type": "debris_fall",
             "source": "КМВА",
-            "description": "Уламки шахеда виявлено у дворі житлового будинку. Без детонації, постраждалих немає.",
+            "description": "Падіння уламків у дворі без детонації.",
         },
         {
             "id": "INC-2026-09-14-01",
@@ -993,7 +1229,7 @@ def generate_incidents_3m():
             "alert_level": "yellow",
             "impact_type": "debris_fall",
             "source": "КМВА",
-            "description": "Уламки ворожого БПЛА впали на відкриту територію АЗС. Займання оперативно ліквідовано.",
+            "description": "Падіння уламків на відкритій території АЗС.",
         },
         {
             "id": "INC-2026-09-19-01",
@@ -1006,7 +1242,7 @@ def generate_incidents_3m():
             "alert_level": "yellow",
             "impact_type": "debris_fall",
             "source": "ДСНС",
-            "description": "Уламки впали у приватному секторі, пошкоджено паркан та дах житлового будинку.",
+            "description": "Пошкодження паркану та покрівлі у приватному секторі.",
         },
         {
             "id": "INC-2026-09-26-01",
@@ -1019,8 +1255,9 @@ def generate_incidents_3m():
             "alert_level": "yellow",
             "impact_type": "fire",
             "source": "КМВА",
-            "description": "Уламки безпілотника спричинили займання на даху 4-поверхового житлового будинку.",
+            "description": "Займання на даху 4-поверхового житлового будинку.",
         },
+
         # October incidents (Latest period)
         {
             "id": "INC-2026-10-03-01",
@@ -1033,7 +1270,7 @@ def generate_incidents_3m():
             "alert_level": "yellow",
             "impact_type": "intercepted_airburst",
             "source": "КМВА",
-            "description": "Успішне збиття БПЛА над лісистою територією острова Муромець.",
+            "description": "Успішне збиття БпЛА над лісистою територією.",
         },
         {
             "id": "INC-2026-10-06-01",
@@ -1045,8 +1282,8 @@ def generate_incidents_3m():
             "threat_type": "drone_shahed",
             "alert_level": "yellow",
             "impact_type": "debris_fall",
-            "source": "ДСНС Києва",
-            "description": "Падіння уламків на прибудинковій території багатоповерхівки. Пошкоджено кілька автомобілів.",
+            "source": "ДСНС",
+            "description": "Пошкодження кількох автомобілів на прибудинковій території.",
         },
         {
             "id": "INC-2026-10-09-01",
@@ -1059,14 +1296,42 @@ def generate_incidents_3m():
             "alert_level": "yellow",
             "impact_type": "debris_fall",
             "source": "КМВА",
-            "description": "Уламки ударного дрона впали на відкритій ділянці території медичного закладу. Руйнувань немає.",
+            "description": "Падіння уламків на відкритій ділянці території медичного закладу.",
+        },
+        {
+            "id": "INC-2026-10-11-01",
+            "datetime": "2026-10-11 02:45:00",
+            "district": "Деснянський",
+            "location_hint": "Троєщина / вул. Закревського",
+            "lat": 50.5150,
+            "lon": 30.6120,
+            "threat_type": "drone_shahed",
+            "alert_level": "yellow",
+            "impact_type": "debris_fall",
+            "source": "КМВА",
+            "description": "Падіння уламків БпЛА на відкритій ділянці території.",
+        },
+        {
+            "id": "INC-2026-10-11-02",
+            "datetime": "2026-10-11 04:20:00",
+            "district": "Оболонський",
+            "location_hint": "Оболонська набережна",
+            "lat": 50.5080,
+            "lon": 30.5210,
+            "threat_type": "drone_shahed",
+            "alert_level": "yellow",
+            "impact_type": "intercepted_airburst",
+            "source": "Повітряні Сили",
+            "description": "Успішне збиття ударного БпЛА над руслом Дніпра.",
         },
     ]
 
     df = pd.DataFrame(incidents)
     out_path = CURATED_DIR / "kyiv_incidents_3m.csv"
     df.to_csv(out_path, index=False, encoding="utf-8")
-    print(f"Generated {out_path} ({len(df)} curated incidents)")
+    out_path_6m = CURATED_DIR / "kyiv_incidents_6m.csv"
+    df.to_csv(out_path_6m, index=False, encoding="utf-8")
+    print(f"Generated {out_path} and {out_path_6m} ({len(df)} curated incidents)")
 
 
 if __name__ == "__main__":
@@ -1075,3 +1340,4 @@ if __name__ == "__main__":
     generate_timeseries_alerts()
     generate_incidents_3m()
     print("All curated baseline datasets successfully generated!")
+

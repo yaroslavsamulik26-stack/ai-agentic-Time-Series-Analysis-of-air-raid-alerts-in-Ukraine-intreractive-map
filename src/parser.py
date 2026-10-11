@@ -40,6 +40,63 @@ DISTRICT_COORDS = {
 }
 
 
+def normalize_source(raw_text: str, channel_name: str) -> str:
+    lower = raw_text.lower()
+    ch = str(channel_name).lower()
+    if "дснс" in lower or "дснс" in ch:
+        return "ДСНС"
+    elif "кмва" in lower or "сергій попко" in lower or "попко" in lower:
+        return "КМВА"
+    elif "кличко" in lower or "кмда" in lower:
+        return "КМДА (Кличко)"
+    elif "повітрян" in lower or "пс зсу" in lower or "повітряні сили" in ch:
+        return "Повітряні Сили"
+    elif "кмва" in ch:
+        return "КМВА"
+    else:
+        return "КМВА / ДСНС"
+
+
+def extract_concise_consequence(raw_text: str, impact_type: str) -> str:
+    lower = raw_text.lower()
+    if "склін" in lower or "вікн" in lower:
+        return "Пошкодження скління будинку"
+    elif ("покрівл" in lower or "дах" in lower) and ("пожеж" in lower or "загор" in lower or "займ" in lower):
+        return "Локальна пожежа покрівлі"
+    elif "склад" in lower:
+        return "Загоряння складських приміщень"
+    elif "авто" in lower or "машин" in lower or "парковк" in lower or "стоянк" in lower:
+        return "Пошкодження припаркованих автомобілів"
+    elif "нежитлов" in lower:
+        return "Загоряння нежитлової споруди"
+    elif "фасад" in lower or "багатоповерхів" in lower or "житлов" in lower:
+        return "Пошкодження фасаду житлового будинку"
+    elif "відкрит" in lower or "пустир" in lower:
+        return "Падіння на відкритій місцевості"
+    elif "парк" in lower or "ліс" in lower or "острів" in lower:
+        return "Падіння уламків у парковій зоні"
+    elif "човнов" in lower:
+        return "Пошкодження споруд човнової станції"
+    elif "азс" in lower or "паливн" in lower:
+        return "Локальне займання на території АЗС"
+    elif "міст" in lower or "колі" in lower or "залізниц" in lower:
+        return "Пошкодження транспортної інфраструктури"
+    elif "підстанц" in lower or "тец" in lower or "енергет" in lower:
+        return "Пошкодження об'єкта енергетики"
+    elif "навчальн" in lower or "школ" in lower or "дитсад" in lower:
+        return "Падіння уламків на території навчального закладу"
+    elif "лікарн" in lower or "медичн" in lower or "шпиталь" in lower or "госпітал" in lower:
+        return "Пошкодження скління медичного закладу"
+    elif "збитт" in lower or "перехоплен" in lower or impact_type == "intercepted_airburst":
+        return "Збиття в повітрі черговими силами ППО"
+    elif impact_type == "fire":
+        return "Локальна пожежа, ліквідована ДСНС"
+    elif impact_type == "direct_hit":
+        return "Пряме влучання з локальними руйнуваннями"
+    else:
+        return "Падіння на відкритій місцевості"
+
+
 class KyivDataIngestionPipeline:
     def __init__(self, base_dir: Path | str | None = None):
         if base_dir is None:
@@ -122,16 +179,16 @@ class KyivDataIngestionPipeline:
     def classify_threat(self, text: str) -> tuple[str, str]:
         """Classify weapon threat type and alert level from text."""
         raw_text_lower = text.lower()
-        if any(w in raw_text_lower for w in ["реактивн", "shahed-238", "шахед-238", "шахед 238", "238"]):
-            return "drone_jet", "orange"
-        elif any(w in raw_text_lower for w in ["гербер", "гербар", "парус", "приман", "фальш-ціл", "фальш ціл", "без бойов", "без б/ч", "імітатор", "бандерол", "дань-т"]):
-            return "drone_decoy", "yellow"
-        elif any(w in raw_text_lower for w in ["балістик", "іскандер-м", "іскандер м", "циркон", "zircon", "с-400", "s-400", "kn-23", "кинджал", "кинжал", "балістич"]):
+        if any(w in raw_text_lower for w in ["балістик", "іскандер-м", "іскандер м", "циркон", "zircon", "с-400", "s-400", "kn-23", "кинджал", "кинжал", "балістич"]):
             return "missile_ballistic", "red"
         elif any(w in raw_text_lower for w in ["х-101", "х-59", "х-69", "калібр", "крилат", "іскандер-к", "іскандер к", "х-22", "х-32", "онікс"]):
             return "missile_cruise", "red"
         elif any(w in raw_text_lower for w in ["ракета", "ракети", "ракетою", "ракетн"]):
             return "missile_cruise", "red"
+        elif any(w in raw_text_lower for w in ["гербер", "гербар", "парус", "приман", "фальш-ціл", "фальш ціл", "без бойов", "без б/ч", "імітатор", "бандерол", "дань-т"]):
+            return "drone_decoy", "yellow"
+        elif any(w in raw_text_lower for w in ["реактивн", "shahed-238", "шахед-238", "шахед 238", "238", "шахед", "shahed", "герань", "бпла", "дрон"]):
+            return "drone_shahed", "yellow"
         else:
             return "drone_shahed", "yellow"
 
@@ -192,7 +249,6 @@ class KyivDataIngestionPipeline:
                 continue
 
             # Skip messages purely about other distant regions when Kyiv/capital is not mentioned
-            # Ensure "дніпро" city does not match "дніпровськ" (Kyiv district)!
             other_regions = ["одес", "харків", "запоріж", "краматорськ", "прилук", "суми", "полтав", "кривий ріг", "львів", "херсон", "миколаїв"]
             is_other_city = any(r in raw_text_lower for r in other_regions)
             if re.search(r"\bдніпр(?:о|а|у|ом|і)\b", raw_text_lower) and "дніпровськ" not in raw_text_lower:
@@ -287,6 +343,9 @@ class KyivDataIngestionPipeline:
                 elif "багатоповерхів" in raw_text_lower or "житлов" in raw_text_lower:
                     loc_hint = f"{district}, житлова забудова"
 
+                consequence_fact = extract_concise_consequence(raw_text_lower, impact_type)
+                official_source = normalize_source(clean_text, channel_name)
+
                 event_record = {
                     "id": event_id,
                     "datetime": clean_date,
@@ -297,14 +356,14 @@ class KyivDataIngestionPipeline:
                     "threat_type": threat_type,
                     "alert_level": alert_level,
                     "impact_type": impact_type,
-                    "source": channel_name,
-                    "description": raw_text[:220].replace("\n", " ") + ("..." if len(raw_text) > 220 else ""),
+                    "source": official_source,
+                    "description": consequence_fact,
                 }
                 extracted_events.append(event_record)
 
-                # Clean snippet for NotebookLM export
+                threat_ua = "Ударний БпЛА (Shahed)" if "shahed" in threat_type or "drone" in threat_type else ("Балістична ракета" if "ballistic" in threat_type else "Крилата ракета")
                 notebooklm_texts.append(
-                    f"- **{clean_date}** [{district}] ({threat_type.upper()} / {alert_level.upper()}): {raw_text[:200].replace(chr(10), ' ')}"
+                    f"- **{clean_date}** [{district}] ({threat_ua} / {alert_level.upper()}): {consequence_fact}"
                 )
 
         return extracted_events, notebooklm_texts
@@ -336,6 +395,10 @@ class KyivDataIngestionPipeline:
             tg_df = pd.DataFrame(tg_events)
             incidents_df = pd.concat([incidents_df, tg_df], ignore_index=True)
 
+        # Unify all shahed variants & alert levels
+        incidents_df["threat_type"] = incidents_df["threat_type"].replace({"drone_jet": "drone_shahed"})
+        incidents_df["alert_level"] = incidents_df["alert_level"].replace({"orange": "yellow"})
+
         # Deduplicate by approximate time (minute level) and district
         incidents_df["datetime_min"] = pd.to_datetime(incidents_df["datetime"]).dt.floor("10min")
         incidents_df = incidents_df.drop_duplicates(subset=["datetime_min", "district"], keep="first")
@@ -358,19 +421,28 @@ class KyivDataIngestionPipeline:
         threat_summary = incidents_df["threat_type"].value_counts().to_dict()
         district_summary = incidents_df["district"].value_counts().to_dict()
 
-        content = "# Хроніка та аналітичне зведення повітряних атак по Києву (OSINT / Telegram)\n\n"
+        threat_labels_map = {
+            "drone_shahed": "Ударні БпЛА (Shahed)",
+            "drone_jet": "Ударні БпЛА (Shahed)",
+            "drone_decoy": "Дрони-приманки",
+            "missile_ballistic": "Балістичні ракети",
+            "missile_cruise": "Крилаті ракети",
+        }
+
+        content = "# Хроніка та аналітичне зведення повітряних атак по Києву (OSINT / Офіційні джерела)\n\n"
         content += "## 1. Загальні метрики та тактичні висновки (Defense Executive Summary)\n\n"
         content += f"- **Всього структуровано верифікованих інцидентів:** {len(incidents_df)}\n"
-        content += f"- **Період спостереження:** Липень — Жовтень 2026 року (100 діб)\n"
-        content += "- **Ключові тактичні зміни:**\n"
-        content += "  1. **Поява реактивних ударних БпЛА (`drone_jet` / Shahed-238):** з кінця вересня ворог перейшов до застосування швидкісних реактивних дронів для денних атак на стратегічні переправи (Південний та Північний мости) та привокзальну інфраструктуру.\n"
-        content += "  2. **Застосування фальш-цілей та приманок (`drone_decoy` / Гербера, Бандероль):** масовані вильоти роїв дронів-приманок для виснаження БК мобільних вогневих груп перед балістичними ударами.\n"
-        content += "  3. **Концентровані балістичні залпи (`missile_ballistic`):** масовані удари комбінацією Іскандер-М, С-400, Циркон та KN-23 (до 40 балістичних цілей за 40 хвилин), орієнтовані на оборонні заводи (Артем, Луч, Антонов) та урядові центри.\n"
-        content += "  4. **Розгортання передових рубежів ППО:** у жовтні 2026 розгорнуто 12+ автоматизованих великокаліберних турелей на північному річковому та західному коридорах.\n\n"
+        content += f"- **Період спостереження:** Квітень — Жовтень 2026 року (6 місяців / 184 доби)\n"
+        content += "- **Ключові тактичні особливості:**\n"
+        content += "  1. **Єдиний тактичний тип ударних БпЛА (`Ударні БпЛА (Shahed)`):** поєднання висотних та низьковисотних проривів уздовж річкових та транспортних коридорів (Дніпро, Житомирська траса, Обухівський напрямок).\n"
+        content += "  2. **Застосування фальш-цілей та приманок (Гербера, Бандероль):** масовані вильоти роїв дронів-приманок для виснаження БК мобільних вогневих груп перед ракетними ударами.\n"
+        content += "  3. **Концентровані ракетні залпи (Балістичні та крилаті ракети):** удари комбінацією Іскандер-М, С-400, Циркон, KN-23 та Х-101 по стратегічних об'єктах столиці.\n"
+        content += "  4. **Розгортання передових рубежів ППО:** розгорнуто 12+ автоматизованих великокаліберних турелей та мобільних вогневих груп на річковому та західному рубежах.\n\n"
 
         content += "### Розподіл за видами загроз:\n"
         for th, cnt in threat_summary.items():
-            content += f"- `{th}`: {cnt} інцидентів ({round(cnt / len(incidents_df) * 100, 1)}%)\n"
+            lbl = threat_labels_map.get(th, th)
+            content += f"- **{lbl}:** {cnt} інцидентів ({round(cnt / len(incidents_df) * 100, 1)}%)\n"
 
         content += "\n### Розподіл інцидентів за секторами та районами:\n"
         for dist, cnt in district_summary.items():
@@ -380,7 +452,9 @@ class KyivDataIngestionPipeline:
         content += "| Дата | Сектор / Район | Тип загрози | Рівень | Локація | Наслідки |\n"
         content += "|---|---|---|---|---|---|\n"
         for _, row in incidents_df.head(80).iterrows():
-            content += f"| {row['datetime']} | {row['district']} | {row['threat_type']} | {row['alert_level']} | {row['location_hint']} | {row['description'][:80]}... |\n"
+            th_ua = threat_labels_map.get(row['threat_type'], row['threat_type'])
+            lvl_ua = "Жовтий рівень (БпЛА)" if row['alert_level'] == 'yellow' else "Червоний рівень (Ракети)"
+            content += f"| {row['datetime']} | {row['district']} | {th_ua} | {lvl_ua} | {row['location_hint']} | {row['description']} |\n"
 
         content += "\n\n## 3. Детальний лог первинних зведень моніторингових каналів:\n\n"
         content += "\n".join(all_notebooklm_lines[:300])
@@ -405,3 +479,4 @@ if __name__ == "__main__":
     pipeline = KyivDataIngestionPipeline()
     res = pipeline.run_pipeline()
     print("Pipeline result:", res)
+

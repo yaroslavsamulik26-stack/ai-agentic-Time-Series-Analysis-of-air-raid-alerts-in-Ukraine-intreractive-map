@@ -106,11 +106,11 @@ class KyivRiskEngine:
             # 1. Base vulnerability
             v_yellow = float(props.get("vuln_yellow", 20))
             v_red = float(props.get("vuln_red", 20))
-            v_orange = round(v_yellow * 0.6 + v_red * 0.4, 1)
+            v_orange = v_yellow
 
             # 2. Incident Proximity (0 - 30)
             prox_yellow = self.calculate_incident_proximity_score(lat, lon, mode="yellow")
-            prox_orange = self.calculate_incident_proximity_score(lat, lon, mode="orange")
+            prox_orange = prox_yellow
             prox_red = self.calculate_incident_proximity_score(lat, lon, mode="red")
             prox_all = self.calculate_incident_proximity_score(lat, lon, mode="all")
 
@@ -120,14 +120,14 @@ class KyivRiskEngine:
 
             # 4. Temporal factor defaults
             time_factor_yellow = 16.0
-            time_factor_orange = 15.0
+            time_factor_orange = 16.0
             time_factor_red = 14.0
 
             # Combined Scores (capped at 100)
             score_yellow = min(100.0, round(v_yellow + prox_yellow + time_factor_yellow + dist_factor, 1))
-            score_orange = min(100.0, round(v_orange + prox_orange + time_factor_orange + dist_factor, 1))
+            score_orange = score_yellow
             score_red = min(100.0, round(v_red + prox_red + time_factor_red + dist_factor, 1))
-            score_all = min(100.0, round(max(score_yellow, score_orange, score_red) * 0.6 + min(score_yellow, score_red) * 0.4, 1))
+            score_all = min(100.0, round(max(score_yellow, score_red) * 0.6 + min(score_yellow, score_red) * 0.4, 1))
 
             # Defense facilities have active protection
             if cat == "defense":
@@ -206,7 +206,7 @@ class KyivRiskEngine:
             d_props = feat["properties"]
             name = d_props["district"]
             d_yellow = incidents_by_dist_level.get(name, {}).get("yellow", 0)
-            d_orange = incidents_by_dist_level.get(name, {}).get("orange", 0)
+            d_orange = d_yellow
             d_red = incidents_by_dist_level.get(name, {}).get("red", 0)
             d_all = incidents_by_district.get(name, 0)
 

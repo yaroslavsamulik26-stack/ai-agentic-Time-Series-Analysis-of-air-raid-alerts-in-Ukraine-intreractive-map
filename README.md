@@ -22,20 +22,22 @@ This project combines **leak-free Time Series forecasting** of alert hazard prob
 ## 🚀 Key Features
 
 1. **Strict Leak-Free Time Series Modeling (Zero Data Leakage):**
-   - Chronological temporal train/test split: Training on alerts up to August 31, 2026; holdout evaluation on September 1 – October 10, 2026.
+   - 6-Month analytical horizon: 169 alert episodes from April 11 to October 11, 2026.
+   - Chronological temporal train/test split: Training on alerts up to August 31, 2026; holdout evaluation on September 1 – October 11, 2026.
    - All features at time $T$ (historical alert density, time elapsed since previous raid, cyclical harmonic diurnal phases) are strictly backward-looking.
-   - Outperforms baseline empirical frequency: **ROC-AUC: 0.681** (vs Baseline: 0.647), **Brier Score: 0.217**.
+   - Outperforms baseline empirical frequency: **ROC-AUC: 0.651**, **Brier Score: 0.235**.
 2. **Multi-Factor Facility Risk Scoring ($0–100$):**
-   - Real-time risk index for 35+ critical Kyiv infrastructure facilities across energy (TECs, substations), transport (bridges, railway hubs), administration, and defense manufacturing.
-   - Incorporates spatial kernel proximity decay to confirmed strike/debris points over the past 3 months.
+   - Real-time risk index for 44 critical Kyiv infrastructure facilities across energy (TECs, substations), transport (bridges, railway hubs), administration, and defense manufacturing.
+   - Incorporates spatial kernel proximity decay to confirmed strike/debris points over the past 6 months (835 verified events).
 3. **Calibrated District Hazard Index & Gapless 10-District Coverage:**
    - 100% seamless, contiguous OpenStreetMap administrative polygons for all 10 Kyiv districts (Right and Left banks) with zero unpartitioned gaps.
-   - Logarithmically calibrated risk scoring reflecting actual strike distribution (from quietest districts with 9-13 strikes to most targeted central sectors with 260+ events).
+   - Logarithmically calibrated risk scoring reflecting actual strike distribution across all 10 administrative sectors.
 4. **Interactive Standalone Web Dashboard (`index.html`):**
    - Built on Leaflet with Google Maps Roadmap and Google Satellite tiles.
-   - Compact, closable, and draggable control headers.
-   - Interactive incident time-range selector defaulting to the last 7 days (`7 днів`, `30 днів`, `Всі (3 міс)`).
-   - Dynamic threat toggler: Yellow Threat (Shahed/drones), Red Threat (missiles/ballistics), and Combined.
+   - 100% Ukrainian terminology localization (no raw English technical tags like `drone_shahed` or `debris_fall`).
+   - Compact, structured, and factual incident popups (location, time, threat type, verified consequence fact, official source).
+   - Unified Shahed category: 3 clean threat modes: **«Всі загрози»**, **«Ударні БпЛА (Shahed)»**, **«Ракети»**.
+   - Interactive time-range selector defaulting to last 7 days (`7 днів`, `30 днів`, `Всі (6 міс)`).
    - Runs out-of-the-box in any browser with zero API keys or external server dependencies.
 5. **Universal Multi-Source Ingestion (`src/parser.py`):**
    - Supports Telegram Desktop JSON exports (`result.json`), NotebookLM/Perplexity OSINT text and Markdown dumps, and official alerts archives.

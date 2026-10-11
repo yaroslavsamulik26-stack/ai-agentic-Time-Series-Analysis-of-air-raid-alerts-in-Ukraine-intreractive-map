@@ -688,13 +688,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 <i class="fa-solid fa-layer-group"></i> Всі загрози
             </button>
             <button class="mode-btn" data-mode="yellow" onclick="setThreatMode('yellow')">
-                <i class="fa-solid fa-triangle-exclamation"></i> Жовтий (Шахеди)
+                <i class="fa-solid fa-triangle-exclamation"></i> Ударні БпЛА (Shahed)
             </button>
-            <button class="mode-btn" data-mode="orange" onclick="setThreatMode('orange')">
-                <i class="fa-solid fa-jet-fighter"></i> Реактивні БпЛА
-            </button>
-            <button class="mode-btn" data-mode="red" onclick="setThreatMode('red')">
-                <i class="fa-solid fa-radiation"></i> Червоний (Ракети)
+            <button class="mode-btn" data-mode="red" onclick="setThreatMode('red')" title="Ракети (Крилаті / Балістика)">
+                <i class="fa-solid fa-radiation"></i> Ракети
             </button>
         </div>
 
@@ -707,7 +704,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 30 днів
             </button>
             <button class="time-btn" data-range="all" onclick="setTimeRange('all')" title="Показати всі зафіксовані удари">
-                Всі (3 міс)
+                Всі (6 міс)
             </button>
         </div>
 
@@ -802,15 +799,15 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             <!-- Tab 4: NotebookLM OSINT Summary -->
             <div id="tab-notebooklm" class="tab-pane">
                 <div class="filter-section">
-                    <div class="section-title"><i class="fa-solid fa-brain"></i> Аналітичні висновки (100 діб атак)</div>
+                    <div class="section-title"><i class="fa-solid fa-brain"></i> Аналітичні висновки (6 місяців атак)</div>
                     <div style="font-size:11px; line-height:1.45; color:#cbd5e1; display:flex; flex-direction:column; gap:8px;">
                         <div style="background:rgba(255,255,255,0.04); border:1px solid var(--border-color); border-radius:6px; padding:8px;">
-                            <div style="color:#f97316; font-weight:700; margin-bottom:2px;"><i class="fa-solid fa-jet-fighter"></i> Еволюція до реактивних дронів</div>
-                            Поява реактивних Shahed-238 та Gerbera для денних швидкісних проривів по стратегічних мостах (Південний міст, 1 жовтня 2026).
+                            <div style="color:#eab308; font-weight:700; margin-bottom:2px;"><i class="fa-solid fa-triangle-exclamation"></i> Ударні БпЛА (Shahed)</div>
+                            Масоване комбіноване застосування ударних БпЛА вздовж річкових та транспортних коридорів підльоту столиці.
                         </div>
                         <div style="background:rgba(255,255,255,0.04); border:1px solid var(--border-color); border-radius:6px; padding:8px;">
                             <div style="color:#10b981; font-weight:700; margin-bottom:2px;"><i class="fa-solid fa-crosshairs"></i> Розгортання турелей ППО</div>
-                            Встановлення понад 12 автоматизованих турельних систем для протидії реактивним БпЛА на північному та західному рубежах.
+                            Встановлення понад 12 автоматизованих турельних систем для протидії БпЛА на північному та західному рубежах.
                         </div>
                         <div style="background:rgba(255,255,255,0.04); border:1px solid var(--border-color); border-radius:6px; padding:8px;">
                             <div style="color:#ef4444; font-weight:700; margin-bottom:2px;"><i class="fa-solid fa-meteor"></i> Балістичні залпи високої щільності</div>
@@ -843,9 +840,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         <div class="legend-item"><div class="legend-color" style="background:#eab308;"></div> 45-59: Підвищений ризик</div>
         <div class="legend-item"><div class="legend-color" style="background:#10b981;"></div> 0-44: Помірний ризик</div>
         <div style="margin-top:4px; border-top:1px solid rgba(255,255,255,0.1); padding-top:4px; display:flex; flex-direction:column; gap:3px;">
-            <div class="legend-item"><i class="fa-solid fa-circle" style="color:#eab308; font-size:9px;"></i> Шахед (поршневий)</div>
-            <div class="legend-item"><i class="fa-solid fa-circle" style="color:#f97316; font-size:9px;"></i> Реактивний БпЛА (Jet)</div>
-            <div class="legend-item"><i class="fa-solid fa-circle" style="color:#ef4444; font-size:9px;"></i> Балістика / Ракета</div>
+            <div class="legend-item"><i class="fa-solid fa-circle" style="color:#eab308; font-size:9px;"></i> Ударний БпЛА (Shahed)</div>
+            <div class="legend-item"><i class="fa-solid fa-circle" style="color:#ef4444; font-size:9px;"></i> Ракети (Крилаті / Балістика)</div>
             <div class="legend-item"><i class="fa-solid fa-shield-halved" style="color:#10b981; font-size:10px;"></i> Ешелон ППО & турелі</div>
             <div class="legend-item"><i class="fa-solid fa-route" style="color:#38bdf8; font-size:10px;"></i> Вектор підльоту БпЛА</div>
         </div>
@@ -860,7 +856,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                         <i class="fa-solid fa-book-bookmark" style="color:#818cf8;"></i> NotebookLM Defense Intel Briefing
                     </h2>
                     <p style="font-size:11px; color:var(--text-muted);">
-                        Хроніка повітряних атак по Києву за липень — жовтень 2026 р. Верифікація за зведеннями КМВА, ДСНС та OSINT.
+                        Хроніка повітряних атак по Києву за квітень — жовтень 2026 р. (6 місяців). Верифікація за зведеннями КМВА, ДСНС та OSINT.
                     </p>
                 </div>
                 <button class="btn-close" onclick="closeNotebookLMModal()">&times;</button>
@@ -868,15 +864,15 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
             <div class="metrics-grid">
                 <div class="metric-card">
-                    <div class="metric-val" style="color:#38bdf8;" id="modal-nblm-total">815</div>
+                    <div class="metric-val" style="color:#38bdf8;" id="modal-nblm-total">835</div>
                     <div class="metric-label">Верифікованих подій</div>
                 </div>
                 <div class="metric-card">
-                    <div class="metric-val" style="color:#f97316;" id="modal-nblm-jet">15</div>
-                    <div class="metric-label">Атак реактивних БпЛА</div>
+                    <div class="metric-val" style="color:#eab308;" id="modal-nblm-shahed">745</div>
+                    <div class="metric-label">Ударних БпЛА (Shahed)</div>
                 </div>
                 <div class="metric-card">
-                    <div class="metric-val" style="color:#ef4444;" id="modal-nblm-missiles">79</div>
+                    <div class="metric-val" style="color:#ef4444;" id="modal-nblm-missiles">89</div>
                     <div class="metric-label">Балістичних / крилатих ударів</div>
                 </div>
                 <div class="metric-card">
@@ -887,11 +883,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
             <div style="display:flex; flex-direction:column; gap:10px;">
                 <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:8px; padding:12px;">
-                    <h3 style="font-size:13px; font-weight:700; color:#f97316; margin-bottom:6px;">
-                        <i class="fa-solid fa-jet-fighter"></i> 1. Тактичний зсув: перехід до швидкісних реактивних Shahed-238
+                    <h3 style="font-size:13px; font-weight:700; color:#eab308; margin-bottom:6px;">
+                        <i class="fa-solid fa-triangle-exclamation"></i> 1. Тактика застосування ударних БпЛА (Shahed)
                     </h3>
                     <p style="font-size:12px; line-height:1.5; color:#cbd5e1;">
-                        З кінця вересня 2026 противник змінив тактику, поєднавши традиційні нічні рої повільних дронів з денними ударами <b>реактивних БпЛА (швидкість до 500 км/год)</b>. Основні цілі — відкриті транспортні артерії (удар по опорах Південного мосту 1 жовтня, удари біля Північного мосту 3-4 жовтня) та пасажирські термінали (вузол «Шайба» біля Центрального вокзалу).
+                        Противник застосовує комбіновані рої ударних БпЛА (Shahed) для виснаження оборони та ураження стратегічних переправ, енергетичної інфраструктури та логістичних вузлів столиці вздовж русла Дніпра та ключових магістралей.
                     </p>
                 </div>
 
@@ -1333,6 +1329,37 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             });
         }
 
+        function formatThreatTypeUA(type) {
+            switch(type) {
+                case 'drone_shahed':
+                case 'drone_jet':
+                    return 'Ударний БпЛА (Shahed)';
+                case 'drone_decoy':
+                    return 'БпЛА-приманка (без Б/Ч)';
+                case 'missile_ballistic':
+                    return 'Балістична ракета';
+                case 'missile_cruise':
+                    return 'Крилата ракета';
+                default:
+                    return 'Повітряна ціль';
+            }
+        }
+
+        function formatImpactTypeUA(type) {
+            switch(type) {
+                case 'debris_fall':
+                    return 'Падіння уламків';
+                case 'direct_hit':
+                    return 'Пряме влучання';
+                case 'fire':
+                    return 'Займання / пожежа';
+                case 'intercepted_airburst':
+                    return 'Збиття в повітрі';
+                default:
+                    return 'Фіксація влучання / уламків';
+            }
+        }
+
         // 3. Render Incidents (with 7-day default filter)
         function renderIncidents() {
             incidentsLayerGroup.clearLayers();
@@ -1341,7 +1368,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
             INCIDENTS_DATA.forEach(inc => {
                 if (currentThreatMode === 'yellow' && inc.alert_level !== 'yellow') return;
-                if (currentThreatMode === 'orange' && inc.alert_level !== 'orange') return;
                 if (currentThreatMode === 'red' && inc.alert_level !== 'red') return;
 
                 if (cutoff) {
@@ -1351,14 +1377,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 count++;
 
                 let incColor = '#eab308';
-                if (inc.threat_type === 'drone_jet' || inc.alert_level === 'orange') {
-                    incColor = '#f97316';
-                } else if (inc.threat_type === 'missile_ballistic') {
+                if (inc.threat_type === 'missile_ballistic' || inc.alert_level === 'red') {
                     incColor = '#ef4444';
                 } else if (inc.threat_type === 'missile_cruise') {
                     incColor = '#ec4899';
-                } else if (inc.alert_level === 'red') {
-                    incColor = '#ef4444';
                 }
 
                 const incidentIcon = L.divIcon({
@@ -1368,16 +1390,19 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     iconAnchor: [7, 7]
                 });
 
+                const threatUA = formatThreatTypeUA(inc.threat_type);
+                const impactUA = formatImpactTypeUA(inc.impact_type);
+
                 const marker = L.marker([inc.lat, inc.lon], { icon: incidentIcon });
                 const popup = `
-                    <div class="popup-title"><i class="fa-solid fa-triangle-exclamation" style="color:${incColor}"></i> Подія: ${inc.location_hint}</div>
+                    <div class="popup-title"><i class="fa-solid fa-triangle-exclamation" style="color:${incColor}"></i> ${inc.location_hint}</div>
                     <div class="popup-cat">${inc.district} • ${inc.datetime}</div>
-                    <div style="font-size:11px; margin-bottom:4px;">
-                        Тип загрози: <b>${inc.threat_type}</b> (${inc.alert_level.toUpperCase()})<br>
-                        Наслідки: <b>${inc.impact_type}</b><br>
-                        Джерело: <i>${inc.source}</i>
+                    <div style="font-size:11px; margin:4px 0; line-height:1.4;">
+                        <b>Загроза:</b> ${threatUA}<br>
+                        <b>Характер:</b> ${impactUA}<br>
+                        <b>Джерело:</b> <i>${inc.source}</i>
                     </div>
-                    <div class="popup-desc">${inc.description}</div>
+                    <div class="popup-desc" style="border-top:1px solid rgba(255,255,255,0.1); padding-top:4px;">${inc.description}</div>
                 `;
                 marker.bindPopup(popup);
                 incidentsLayerGroup.addLayer(marker);
@@ -1538,7 +1563,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                         <p>${inc.datetime.split(' ')[0]} • ${inc.location_hint}</p>
                     </div>
                     <span style="font-size:10px; padding:2px 6px; border-radius:4px; background:${badgeBg}; color:${badgeColor}; border:1px solid ${badgeColor}44; font-weight:600;">
-                        ${inc.threat_type.replace('drone_', '').replace('missile_', '')}
+                        ${formatThreatTypeUA(inc.threat_type)}
                     </span>
                 `;
                 container.appendChild(card);
