@@ -2,12 +2,13 @@
 map_builder.py
 Generates the standalone, interactive Kyiv Defense Map & Analytics Dashboard (index.html).
 Features:
-- Google Maps (Roadmap + Satellite) & Dark Tactical Tile switchers.
+- Google Maps (Roadmap + Satellite) tile switchers (Dark map completely removed).
+- Full 10 Kyiv districts rendered as interactive polygons on both Right and Left banks.
+- Compact, draggable, and closable floating control panels.
 - Yellow (Drones/Shahed) vs Red (Missiles/Ballistics) vs All Threats mode toggling.
 - Infrastructure Category filtering (Energy, Transport/Bridges, Admin, Defense).
-- Popups with multi-factor Risk Scores (0-100), vulnerability, and descriptions.
-- District Safety Rankings leaderboard and 3-month incident points.
-- Embedded Time Series analytics drawer with leak-free evaluation metrics.
+- Deep, calibrated multi-factor Risk Scores (0-100) and district safety leaderboard.
+- Embedded Time Series analytics modal with leak-free evaluation metrics.
 """
 
 import json
@@ -36,8 +37,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <style>
         :root {
             --bg-dark: #0f172a;
-            --panel-bg: rgba(15, 23, 42, 0.85);
-            --border-color: rgba(255, 255, 255, 0.12);
+            --panel-bg: rgba(15, 23, 42, 0.90);
+            --border-color: rgba(255, 255, 255, 0.15);
             --accent-yellow: #eab308;
             --accent-red: #ef4444;
             --accent-blue: #3b82f6;
@@ -67,140 +68,194 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             z-index: 1;
         }
 
-        /* Top Header Bar */
+        /* Top Navigation Bar - Compact & Draggable */
         .top-navbar {
             position: absolute;
-            top: 16px;
-            left: 16px;
-            right: 16px;
+            top: 10px;
+            left: 10px;
             z-index: 1000;
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            gap: 10px;
             background: var(--panel-bg);
             backdrop-filter: blur(12px);
-            padding: 12px 20px;
-            border-radius: 14px;
+            padding: 6px 12px;
+            border-radius: 10px;
             border: 1px solid var(--border-color);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.37);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+            user-select: none;
+            cursor: move;
         }
 
         .title-block {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 8px;
         }
 
         .title-badge {
             background: linear-gradient(135deg, #1e3a8a, #0284c7);
             color: white;
-            font-size: 11px;
+            font-size: 9px;
             font-weight: 700;
-            letter-spacing: 0.8px;
+            letter-spacing: 0.5px;
             text-transform: uppercase;
-            padding: 5px 10px;
-            border-radius: 8px;
+            padding: 3px 6px;
+            border-radius: 6px;
         }
 
         .title-text h1 {
-            font-size: 17px;
+            font-size: 13px;
             font-weight: 700;
             color: #ffffff;
+            white-space: nowrap;
         }
 
-        .title-text p {
-            font-size: 12px;
-            color: var(--text-muted);
-        }
-
-        /* Threat Mode Selector */
+        /* Threat Mode Selector - Small Icons */
         .threat-modes {
             display: flex;
-            gap: 8px;
-            background: rgba(0, 0, 0, 0.35);
-            padding: 4px;
-            border-radius: 10px;
+            gap: 4px;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 3px;
+            border-radius: 8px;
         }
 
         .mode-btn {
             border: none;
             background: transparent;
             color: var(--text-muted);
-            padding: 8px 14px;
-            font-size: 13px;
+            padding: 4px 8px;
+            font-size: 11px;
             font-weight: 600;
-            border-radius: 8px;
+            border-radius: 6px;
             cursor: pointer;
             transition: all 0.2s ease;
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 5px;
         }
 
         .mode-btn:hover {
             color: #ffffff;
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(255, 255, 255, 0.08);
         }
 
         .mode-btn.active[data-mode="all"] {
             background: #334155;
             color: #f8fafc;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
         }
 
         .mode-btn.active[data-mode="yellow"] {
             background: #ca8a04;
             color: #ffffff;
-            box-shadow: 0 0 14px rgba(234, 179, 8, 0.4);
+            box-shadow: 0 0 10px rgba(234, 179, 8, 0.5);
         }
 
         .mode-btn.active[data-mode="red"] {
             background: #dc2626;
             color: #ffffff;
-            box-shadow: 0 0 14px rgba(239, 68, 68, 0.4);
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
         }
 
-        .header-actions {
-            display: flex;
-            gap: 10px;
-        }
-
-        .btn-action {
-            background: rgba(255, 255, 255, 0.1);
+        .btn-action-small {
+            background: rgba(255, 255, 255, 0.08);
             color: #ffffff;
             border: 1px solid var(--border-color);
-            padding: 8px 14px;
-            border-radius: 8px;
-            font-size: 13px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 11px;
             font-weight: 600;
             cursor: pointer;
             transition: background 0.2s;
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 5px;
+            white-space: nowrap;
         }
 
-        .btn-action:hover {
+        .btn-action-small:hover {
             background: rgba(255, 255, 255, 0.2);
         }
 
-        /* Side Panel */
+        /* Reopen floating button */
+        .reopen-panel-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 999;
+            background: var(--panel-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-color);
+            color: #ffffff;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+        }
+
+        .reopen-panel-btn:hover {
+            background: rgba(30, 41, 59, 0.95);
+        }
+
+        /* Side Panel - Draggable & Closable */
         .side-panel {
             position: absolute;
-            top: 86px;
-            right: 16px;
-            bottom: 24px;
-            width: 380px;
+            top: 60px;
+            right: 12px;
+            width: 360px;
+            max-height: calc(100vh - 80px);
             z-index: 1000;
             background: var(--panel-bg);
-            backdrop-filter: blur(12px);
-            border-radius: 14px;
+            backdrop-filter: blur(14px);
+            border-radius: 12px;
             border: 1px solid var(--border-color);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 10px 35px rgba(0, 0, 0, 0.5);
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            transition: transform 0.3s ease;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+
+        .panel-drag-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.35);
+            border-bottom: 1px solid var(--border-color);
+            cursor: move;
+            user-select: none;
+        }
+
+        .panel-drag-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-muted);
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-panel-close {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 16px;
+            cursor: pointer;
+            padding: 0 4px;
+            line-height: 1;
+            transition: color 0.2s;
+        }
+
+        .btn-panel-close:hover {
+            color: #ffffff;
         }
 
         .panel-tabs {
@@ -211,9 +266,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
         .panel-tab {
             flex: 1;
-            padding: 12px;
+            padding: 8px 6px;
             text-align: center;
-            font-size: 13px;
+            font-size: 11px;
             font-weight: 600;
             color: var(--text-muted);
             cursor: pointer;
@@ -224,13 +279,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .panel-tab.active {
             color: #ffffff;
             border-bottom-color: var(--accent-blue);
-            background: rgba(255, 255, 255, 0.03);
+            background: rgba(255, 255, 255, 0.04);
         }
 
         .panel-content {
             flex: 1;
             overflow-y: auto;
-            padding: 16px;
+            padding: 12px;
         }
 
         .tab-pane {
@@ -243,16 +298,16 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
         /* Filter Section */
         .filter-section {
-            margin-bottom: 18px;
+            margin-bottom: 14px;
         }
 
         .section-title {
-            font-size: 12px;
+            font-size: 11px;
             text-transform: uppercase;
             font-weight: 700;
             color: var(--text-muted);
             letter-spacing: 0.5px;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             display: flex;
             align-items: center;
             gap: 6px;
@@ -261,37 +316,37 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .category-filters {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 8px;
+            gap: 6px;
         }
 
         .filter-chip {
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(255, 255, 255, 0.04);
             border: 1px solid var(--border-color);
-            padding: 8px 10px;
-            border-radius: 8px;
-            font-size: 12px;
+            padding: 5px 8px;
+            border-radius: 6px;
+            font-size: 11px;
             color: #e2e8f0;
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 5px;
             cursor: pointer;
             transition: all 0.2s;
             user-select: none;
         }
 
         .filter-chip.active {
-            background: rgba(59, 130, 246, 0.2);
+            background: rgba(59, 130, 246, 0.25);
             border-color: var(--accent-blue);
             color: #ffffff;
         }
 
         /* Leaderboard & Stats Cards */
         .stat-card {
-            background: rgba(255, 255, 255, 0.04);
+            background: rgba(255, 255, 255, 0.03);
             border: 1px solid var(--border-color);
-            border-radius: 10px;
-            padding: 12px;
-            margin-bottom: 10px;
+            border-radius: 8px;
+            padding: 8px 10px;
+            margin-bottom: 6px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -301,65 +356,99 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
         .stat-card:hover {
             background: rgba(255, 255, 255, 0.08);
-            border-color: rgba(255, 255, 255, 0.25);
+            border-color: rgba(255, 255, 255, 0.3);
             transform: translateX(-2px);
         }
 
         .district-info h4 {
-            font-size: 14px;
+            font-size: 12px;
             font-weight: 600;
             color: #f1f5f9;
         }
 
         .district-info p {
-            font-size: 11px;
+            font-size: 10px;
             color: var(--text-muted);
             margin-top: 2px;
         }
 
         .score-pill {
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 10px;
             font-weight: 700;
+            white-space: nowrap;
         }
 
-        /* Map Legend Overlay */
+        /* Map Legend Overlay - Compact */
         .map-legend {
             position: absolute;
-            bottom: 24px;
-            left: 16px;
+            bottom: 16px;
+            left: 12px;
             z-index: 1000;
             background: var(--panel-bg);
-            backdrop-filter: blur(12px);
-            padding: 12px 16px;
-            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            padding: 8px 12px;
+            border-radius: 8px;
             border: 1px solid var(--border-color);
-            font-size: 12px;
+            font-size: 11px;
             display: flex;
             flex-direction: column;
-            gap: 6px;
+            gap: 4px;
         }
 
         .legend-item {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
         }
 
         .legend-color {
-            width: 12px;
-            height: 12px;
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
+        }
+
+        /* Base Tile Switcher in Map (Google Roadmap & Google Satellite Only) */
+        .tile-selector {
+            position: absolute;
+            bottom: 16px;
+            right: 12px;
+            z-index: 999;
+            background: var(--panel-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 3px;
+            display: flex;
+            gap: 3px;
+        }
+
+        .tile-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 4px 8px;
+            font-size: 11px;
+            font-weight: 600;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tile-btn.active {
+            background: var(--accent-blue);
+            color: #ffffff;
         }
 
         /* Custom Popup Styling */
         .leaflet-popup-content-wrapper {
             background: #1e293b !important;
             color: #f8fafc !important;
-            border-radius: 12px !important;
-            border: 1px solid rgba(255, 255, 255, 0.15) !important;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5) !important;
+            border-radius: 10px !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6) !important;
+            padding: 2px !important;
         }
 
         .leaflet-popup-tip {
@@ -367,40 +456,40 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }
 
         .popup-title {
-            font-size: 15px;
+            font-size: 13px;
             font-weight: 700;
-            margin-bottom: 4px;
+            margin-bottom: 2px;
             color: #ffffff;
         }
 
         .popup-cat {
-            font-size: 11px;
+            font-size: 10px;
             text-transform: uppercase;
             font-weight: 600;
             letter-spacing: 0.5px;
             color: var(--accent-blue);
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
 
         .popup-score-box {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            background: rgba(0, 0, 0, 0.3);
-            padding: 8px 10px;
-            border-radius: 8px;
-            margin-bottom: 10px;
+            background: rgba(0, 0, 0, 0.35);
+            padding: 5px 8px;
+            border-radius: 6px;
+            margin-bottom: 8px;
         }
 
         .popup-score-num {
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 800;
         }
 
         .popup-desc {
-            font-size: 12px;
+            font-size: 11px;
             color: #cbd5e1;
-            line-height: 1.4;
+            line-height: 1.35;
         }
 
         /* Time Series Modal Drawer */
@@ -411,7 +500,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(0, 0, 0, 0.75);
             backdrop-filter: blur(8px);
             z-index: 2000;
             justify-content: center;
@@ -425,22 +514,22 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .modal-card {
             background: #0f172a;
             border: 1px solid var(--border-color);
-            border-radius: 16px;
+            border-radius: 14px;
             width: 90%;
-            max-width: 820px;
+            max-width: 800px;
             max-height: 90vh;
             overflow-y: auto;
-            padding: 24px;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+            padding: 20px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
         }
 
         .modal-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
             border-bottom: 1px solid var(--border-color);
-            padding-bottom: 12px;
+            padding-bottom: 10px;
         }
 
         .btn-close {
@@ -458,71 +547,40 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .metrics-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 12px;
-            margin-bottom: 24px;
+            gap: 10px;
+            margin-bottom: 20px;
         }
 
         .metric-card {
             background: rgba(255, 255, 255, 0.04);
             border: 1px solid var(--border-color);
-            border-radius: 10px;
-            padding: 14px;
+            border-radius: 8px;
+            padding: 10px;
             text-align: center;
         }
 
         .metric-val {
-            font-size: 22px;
+            font-size: 20px;
             font-weight: 800;
             color: #38bdf8;
-            margin-bottom: 4px;
+            margin-bottom: 2px;
         }
 
         .metric-label {
-            font-size: 11px;
+            font-size: 10px;
             color: var(--text-muted);
             text-transform: uppercase;
-        }
-
-        /* Base Tile Switcher in Map */
-        .tile-selector {
-            position: absolute;
-            bottom: 24px;
-            right: 410px;
-            z-index: 1000;
-            background: var(--panel-bg);
-            backdrop-filter: blur(12px);
-            border: 1px solid var(--border-color);
-            border-radius: 10px;
-            padding: 4px;
-            display: flex;
-            gap: 4px;
-        }
-
-        .tile-btn {
-            background: transparent;
-            border: none;
-            color: var(--text-muted);
-            padding: 6px 10px;
-            font-size: 12px;
-            font-weight: 600;
-            border-radius: 6px;
-            cursor: pointer;
-        }
-
-        .tile-btn.active {
-            background: var(--accent-blue);
-            color: #ffffff;
         }
 
         /* Pulse Animation */
         @keyframes pulse-red {
             0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
-            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
             100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
         }
         @keyframes pulse-yellow {
             0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.7); }
-            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(234, 179, 8, 0); }
+            70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(234, 179, 8, 0); }
             100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(234, 179, 8, 0); }
         }
         .pulse-marker-red {
@@ -540,13 +598,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <!-- Map Container -->
     <div id="map"></div>
 
-    <!-- Top Navigation Bar -->
-    <div class="top-navbar">
+    <!-- Top Navigation Bar - Draggable & Compact -->
+    <div class="top-navbar" id="topNavbar">
         <div class="title-block">
             <div class="title-badge">Defense OSINT</div>
             <div class="title-text">
-                <h1>Kyiv Air Defense Risk Map</h1>
-                <p>Аналіз часових рядів тривог та оцінка ризиків об'єктів інфраструктури</p>
+                <h1>Kyiv Defense Map</h1>
             </div>
         </div>
 
@@ -556,43 +613,34 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 <i class="fa-solid fa-layer-group"></i> Всі загрози
             </button>
             <button class="mode-btn" data-mode="yellow" onclick="setThreatMode('yellow')">
-                <i class="fa-solid fa-triangle-exclamation"></i> Жовтий (Шахеди / БПЛА)
+                <i class="fa-solid fa-triangle-exclamation"></i> Жовтий (Шахеди)
             </button>
             <button class="mode-btn" data-mode="red" onclick="setThreatMode('red')">
-                <i class="fa-solid fa-radiation"></i> Червоний (Ракети / Балістика)
+                <i class="fa-solid fa-radiation"></i> Червоний (Ракети)
             </button>
         </div>
 
-        <div class="header-actions">
-            <button class="btn-action" onclick="openAnalyticsModal()">
-                <i class="fa-solid fa-chart-line"></i> Time Series Метрики
-            </button>
+        <button class="btn-action-small" onclick="openAnalyticsModal()">
+            <i class="fa-solid fa-chart-line"></i> Time Series
+        </button>
+    </div>
+
+    <!-- Reopen Floating Button (when panel is closed) -->
+    <button id="openSidePanelBtn" class="reopen-panel-btn" onclick="openSidePanel()">
+        <i class="fa-solid fa-chart-pie"></i> Панель розвідки
+    </button>
+
+    <!-- Side Intelligence Panel - Draggable & Closable -->
+    <div class="side-panel" id="sidePanel">
+        <div class="panel-drag-header" id="panelDragHeader">
+            <div class="panel-drag-title">
+                <i class="fa-solid fa-grip-lines"></i> Оборонна панель
+            </div>
+            <button class="btn-panel-close" onclick="closeSidePanel()" title="Закрити панель">&times;</button>
         </div>
-    </div>
 
-    <!-- Tile Layer Switcher -->
-    <div class="tile-selector">
-        <button class="tile-btn active" data-tile="gmaps_road" onclick="setBaseTile('gmaps_road')">Google Maps</button>
-        <button class="tile-btn" data-tile="gmaps_sat" onclick="setBaseTile('gmaps_sat')">Супутник</button>
-        <button class="tile-btn" data-tile="carto_dark" onclick="setBaseTile('carto_dark')">Нічна карта</button>
-    </div>
-
-    <!-- Legend Overlay -->
-    <div class="map-legend">
-        <div style="font-weight:700; margin-bottom:4px; color:#cbd5e1;">Рівень небезпеки об'єкта:</div>
-        <div class="legend-item"><div class="legend-color" style="background:#dc2626;"></div> 80-100: Критичний ризик</div>
-        <div class="legend-item"><div class="legend-color" style="background:#f97316;"></div> 60-79: Високий ризик</div>
-        <div class="legend-item"><div class="legend-color" style="background:#eab308;"></div> 40-59: Середній ризик</div>
-        <div class="legend-item"><div class="legend-color" style="background:#10b981;"></div> 0-39: Помірний / Базовий</div>
-        <div style="margin-top:6px; border-top:1px solid rgba(255,255,255,0.1); padding-top:4px;">
-            <i class="fa-solid fa-location-crosshairs" style="color:#f43f5e"></i> Інциденти уламків/ударів (3 міс)
-        </div>
-    </div>
-
-    <!-- Side Intelligence Panel -->
-    <div class="side-panel">
         <div class="panel-tabs">
-            <div class="panel-tab active" onclick="switchPanelTab('tab-districts')">Райони Києва</div>
+            <div class="panel-tab active" onclick="switchPanelTab('tab-districts')">Райони (10)</div>
             <div class="panel-tab" onclick="switchPanelTab('tab-objects')">Об'єкти & Фільтри</div>
             <div class="panel-tab" onclick="switchPanelTab('tab-incidents')">Хроніка ударів</div>
         </div>
@@ -601,9 +649,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             <!-- Tab 1: District Rankings -->
             <div id="tab-districts" class="tab-pane active">
                 <div class="filter-section">
-                    <div class="section-title"><i class="fa-solid fa-shield-halved"></i> Рейтинг безпеки районів</div>
-                    <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">
-                        Розраховано на основі частоти ударів за 3 місяці та щільності стратегічних цілей.
+                    <div class="section-title"><i class="fa-solid fa-shield-halved"></i> Рейтинг загрози районів Києва</div>
+                    <p style="font-size:10px; color:var(--text-muted); margin-bottom:8px;">
+                        Включає правий та лівий берег. Клікніть на район, щоб сфокусуватись.
                     </p>
                     <div id="districts-list">
                         <!-- Rendered by JS -->
@@ -617,7 +665,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     <div class="section-title"><i class="fa-solid fa-filter"></i> Категорії об'єктів</div>
                     <div class="category-filters">
                         <div class="filter-chip active" data-cat="energy" onclick="toggleCategoryFilter('energy')">
-                            <i class="fa-solid fa-bolt" style="color:#eab308"></i> Енергетика (ТЕЦ)
+                            <i class="fa-solid fa-bolt" style="color:#eab308"></i> Енергетика
                         </div>
                         <div class="filter-chip active" data-cat="transport" onclick="toggleCategoryFilter('transport')">
                             <i class="fa-solid fa-bridge" style="color:#38bdf8"></i> Мости / Транспорт
@@ -650,13 +698,31 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         </div>
     </div>
 
+    <!-- Tile Layer Switcher: Google Roadmap & Google Satellite ONLY -->
+    <div class="tile-selector">
+        <button class="tile-btn active" data-tile="gmaps_road" onclick="setBaseTile('gmaps_road')">Google Maps</button>
+        <button class="tile-btn" data-tile="gmaps_sat" onclick="setBaseTile('gmaps_sat')">Супутник</button>
+    </div>
+
+    <!-- Legend Overlay -->
+    <div class="map-legend">
+        <div style="font-weight:700; margin-bottom:2px; color:#cbd5e1;">Рівень небезпеки:</div>
+        <div class="legend-item"><div class="legend-color" style="background:#dc2626;"></div> 80-100: Критичний ризик</div>
+        <div class="legend-item"><div class="legend-color" style="background:#ea580c;"></div> 65-79: Високий ризик</div>
+        <div class="legend-item"><div class="legend-color" style="background:#eab308;"></div> 50-64: Підвищений ризик</div>
+        <div class="legend-item"><div class="legend-color" style="background:#10b981;"></div> 0-49: Помірний ризик</div>
+        <div style="margin-top:4px; border-top:1px solid rgba(255,255,255,0.1); padding-top:4px;">
+            <i class="fa-solid fa-location-crosshairs" style="color:#f43f5e"></i> Уламки / прильоти (3 міс)
+        </div>
+    </div>
+
     <!-- Analytics Modal Drawer -->
     <div id="analyticsModal" class="analytics-modal">
         <div class="modal-card">
             <div class="modal-header">
                 <div>
-                    <h2 style="font-size:20px; font-weight:700;">Time Series Analysis & Валідація без Data Leakage</h2>
-                    <p style="font-size:12px; color:var(--text-muted);">
+                    <h2 style="font-size:18px; font-weight:700;">Time Series Analysis & Валідація без Data Leakage</h2>
+                    <p style="font-size:11px; color:var(--text-muted);">
                         Оцінка на найновішому тестовому періоді (Вересень — Жовтень) без заглядання у майбутнє.
                     </p>
                 </div>
@@ -674,36 +740,35 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 </div>
                 <div class="metric-card">
                     <div class="metric-val" id="metric-brier">0.217</div>
-                    <div class="metric-label">Brier Score (Калібрування)</div>
+                    <div class="metric-label">Brier Score</div>
                 </div>
                 <div class="metric-card">
                     <div class="metric-val" id="metric-alerts-cnt">99</div>
-                    <div class="metric-label">Аналізовано тривог</div>
+                    <div class="metric-label">Тривог проаналізовано</div>
                 </div>
             </div>
 
-            <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:12px; padding:16px; margin-bottom:18px;">
-                <h3 style="font-size:14px; font-weight:700; margin-bottom:8px; color:#38bdf8;">
-                    <i class="fa-solid fa-shield-virus"></i> Методологія запобігання Data Leakage (Вимога хакатону)
+            <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:10px; padding:12px; margin-bottom:14px;">
+                <h3 style="font-size:13px; font-weight:700; margin-bottom:6px; color:#38bdf8;">
+                    <i class="fa-solid fa-shield-virus"></i> Методологія запобігання Data Leakage
                 </h3>
-                <p style="font-size:13px; line-height:1.5; color:#cbd5e1;">
-                    Датасет тривог розділено суворо хронологічно: навчальна вибірка (Train) включає дані до <b>1 вересня</b>, а тестова вибірка (Test) — найновіший період з <b>1 вересня по 10 жовтня</b>.<br>
-                    Усі ознаки моделі (кількість тривог за попередні 24/72 год, час з моменту останньої тривоги, циклічні фази доби) на момент прогнозу $T$ обчислюються <b>виключно з інформації, відомої до моменту $T$</b>.
+                <p style="font-size:12px; line-height:1.45; color:#cbd5e1;">
+                    Train split: дані до <b>1 вересня</b>. Test split: <b>1 вересня — 10 жовтня</b>.<br>
+                    Усі ознаки моделі на момент $T$ обчислюються суворо з подій минулого. Жодного витоку майбутніх подій.
                 </p>
             </div>
 
-            <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:12px; padding:16px;">
-                <h3 style="font-size:14px; font-weight:700; margin-bottom:12px;">
-                    <i class="fa-solid fa-clock"></i> Розподіл тривог за годинами доби (Часовий ряд Києва)
+            <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:10px; padding:12px;">
+                <h3 style="font-size:13px; font-weight:700; margin-bottom:10px;">
+                    <i class="fa-solid fa-clock"></i> Розподіл тривог за годинами доби
                 </h3>
-                <div style="display:flex; align-items:flex-end; gap:4px; height:120px; padding-top:10px;" id="hourly-chart">
-                    <!-- Hourly bars populated by JS -->
+                <div style="display:flex; align-items:flex-end; gap:3px; height:100px; padding-top:10px;" id="hourly-chart">
                 </div>
-                <div style="display:flex; justify-content:space-between; margin-top:6px; font-size:11px; color:var(--text-muted);">
+                <div style="display:flex; justify-content:space-between; margin-top:6px; font-size:10px; color:var(--text-muted);">
                     <span>00:00 (Нічний пік шахедів)</span>
-                    <span>06:00 (Ранок)</span>
-                    <span>12:00 (День)</span>
-                    <span>18:00 (Вечір)</span>
+                    <span>06:00</span>
+                    <span>12:00</span>
+                    <span>18:00</span>
                     <span>23:00</span>
                 </div>
             </div>
@@ -719,21 +784,22 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         const TS_STATS = {{ ts_stats_json }};
         const TS_EVAL = {{ ts_eval_json }};
         const INCIDENTS_DATA = {{ incidents_json }};
+        const DISTRICTS_GEOJSON = {{ districts_geojson_json }};
 
-        // Current state
+        // State
         let currentThreatMode = 'all'; // 'all', 'yellow', 'red'
         let activeCategories = new Set(['energy', 'transport', 'admin', 'industry']);
 
         // Initialize Map
         const map = L.map('map', {
             center: [50.4501, 30.5234], // Kyiv Center
-            zoom: 12,
+            zoom: 11,
             zoomControl: false
         });
 
         L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-        // Tile Layers
+        // Tile Layers (Google Maps & Satellite ONLY - Dark map removed)
         const tileLayers = {
             gmaps_road: L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
                 maxZoom: 20,
@@ -742,10 +808,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             gmaps_sat: L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
                 maxZoom: 20,
                 attribution: '© Google Satellite'
-            }),
-            carto_dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                maxZoom: 19,
-                attribution: '© CartoDB'
             })
         };
 
@@ -761,15 +823,15 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             });
         }
 
-        // Feature Layers
+        // Layer Groups
+        let districtsLayerGroup = L.layerGroup().addTo(map);
         let objectsLayerGroup = L.layerGroup().addTo(map);
         let incidentsLayerGroup = L.layerGroup().addTo(map);
-        let districtsLayerGroup = L.layerGroup().addTo(map);
 
         function getScoreColor(score) {
             if (score >= 80) return '#dc2626'; // Red / Critical
-            if (score >= 60) return '#f97316'; // Orange / High
-            if (score >= 40) return '#eab308'; // Yellow / Medium
+            if (score >= 65) return '#ea580c'; // Orange / High
+            if (score >= 50) return '#eab308'; // Yellow / Moderate-High
             return '#10b981'; // Green / Moderate
         }
 
@@ -783,7 +845,73 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             }
         }
 
-        // Render Infrastructure Objects
+        // 1. Render All 10 Kyiv Districts Polygons (Left Bank + Right Bank)
+        function renderDistrictsPolygons() {
+            districtsLayerGroup.clearLayers();
+
+            const districtStatsMap = {};
+            RISK_DATA.districts.forEach(d => {
+                districtStatsMap[d.district] = d;
+            });
+
+            L.geoJSON(DISTRICTS_GEOJSON, {
+                style: function(feature) {
+                    const dName = feature.properties.district;
+                    const stats = districtStatsMap[dName] || {};
+                    const exposure = stats.exposure_index || 50;
+                    const col = getScoreColor(exposure);
+                    return {
+                        fillColor: col,
+                        fillOpacity: 0.18,
+                        weight: 2,
+                        color: col,
+                        dashArray: '4, 4'
+                    };
+                },
+                onEachFeature: function(feature, layer) {
+                    const dName = feature.properties.district;
+                    const stats = districtStatsMap[dName] || {};
+                    const exposure = stats.exposure_index || 50;
+                    const safety = stats.safety_score || 50;
+                    const rank = stats.threat_rank || '-';
+                    const incidents = stats.incidents_count || 0;
+                    const col = getScoreColor(exposure);
+
+                    layer.on('mouseover', function(e) {
+                        layer.setStyle({
+                            fillOpacity: 0.38,
+                            weight: 3,
+                            dashArray: ''
+                        });
+                    });
+
+                    layer.on('mouseout', function(e) {
+                        layer.setStyle({
+                            fillOpacity: 0.18,
+                            weight: 2,
+                            dashArray: '4, 4'
+                        });
+                    });
+
+                    const popup = `
+                        <div class="popup-title">${dName} район</div>
+                        <div class="popup-cat">Ранг загрози: #${rank} • ${stats.status || ''}</div>
+                        <div class="popup-score-box">
+                            <span style="font-size:11px; color:#cbd5e1;">Індекс загрози:</span>
+                            <span class="popup-score-num" style="color:${col};">${exposure}/100</span>
+                        </div>
+                        <div style="font-size:11px; margin-bottom:4px;">
+                            Запас безпеки: <b>${safety}%</b><br>
+                            Інцидентів за 3 міс: <b>${incidents}</b>
+                        </div>
+                        <div class="popup-desc">${feature.properties.description || ''}</div>
+                    `;
+                    layer.bindPopup(popup);
+                }
+            }).addTo(districtsLayerGroup);
+        }
+
+        // 2. Render Infrastructure Objects
         function renderObjects() {
             objectsLayerGroup.clearLayers();
 
@@ -795,18 +923,17 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 const tier = scoreObj.tier;
                 const color = getScoreColor(score);
 
-                // Custom marker
                 const iconHtml = `
-                    <div style="background:${color}; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:white; border:2px solid white; box-shadow:0 3px 10px rgba(0,0,0,0.5);">
-                        <i class="fa-solid ${getCategoryIcon(obj.category)}" style="font-size:13px;"></i>
+                    <div style="background:${color}; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:white; border:2px solid white; box-shadow:0 3px 8px rgba(0,0,0,0.4);">
+                        <i class="fa-solid ${getCategoryIcon(obj.category)}" style="font-size:11px;"></i>
                     </div>
                 `;
 
                 const customIcon = L.divIcon({
                     html: iconHtml,
                     className: (currentThreatMode === 'red' && score >= 75) ? 'pulse-marker-red' : (currentThreatMode === 'yellow' && score >= 75 ? 'pulse-marker-yellow' : ''),
-                    iconSize: [32, 32],
-                    iconAnchor: [16, 16]
+                    iconSize: [28, 28],
+                    iconAnchor: [14, 14]
                 });
 
                 const marker = L.marker([obj.lat, obj.lon], { icon: customIcon });
@@ -815,10 +942,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     <div class="popup-title">${obj.name}</div>
                     <div class="popup-cat"><i class="fa-solid ${getCategoryIcon(obj.category)}"></i> ${obj.category.toUpperCase()} • ${obj.district}</div>
                     <div class="popup-score-box">
-                        <span style="font-size:12px; color:#cbd5e1;">Індекс небезпеки (${currentThreatMode.toUpperCase()}):</span>
+                        <span style="font-size:11px; color:#cbd5e1;">Індекс небезпеки:</span>
                         <span class="popup-score-num" style="color:${color};">${score}/100</span>
                     </div>
-                    <div style="font-size:11px; margin-bottom:6px; color:#94a3b8;">
+                    <div style="font-size:10px; margin-bottom:6px; color:#94a3b8;">
                         Статус: <b style="color:${color};">${tier}</b> | Близькість до уламків: +${scoreObj.proximity} б.
                     </div>
                     <div class="popup-desc">${obj.description}</div>
@@ -829,12 +956,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             });
         }
 
-        // Render Incidents
+        // 3. Render Incidents
         function renderIncidents() {
             incidentsLayerGroup.clearLayers();
 
             INCIDENTS_DATA.forEach(inc => {
-                // Filter by mode
                 if (currentThreatMode === 'yellow' && inc.alert_level !== 'yellow') return;
                 if (currentThreatMode === 'red' && inc.alert_level !== 'red') return;
 
@@ -842,17 +968,17 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 const incColor = isDrone ? '#f59e0b' : '#f43f5e';
 
                 const incidentIcon = L.divIcon({
-                    html: `<div style="background:${incColor}; width:16px; height:16px; border-radius:50%; border:2px solid #ffffff; box-shadow:0 0 8px ${incColor};"></div>`,
+                    html: `<div style="background:${incColor}; width:14px; height:14px; border-radius:50%; border:2px solid #ffffff; box-shadow:0 0 6px ${incColor};"></div>`,
                     className: '',
-                    iconSize: [16, 16],
-                    iconAnchor: [8, 8]
+                    iconSize: [14, 14],
+                    iconAnchor: [7, 7]
                 });
 
                 const marker = L.marker([inc.lat, inc.lon], { icon: incidentIcon });
                 const popup = `
                     <div class="popup-title"><i class="fa-solid fa-triangle-exclamation" style="color:${incColor}"></i> Подія: ${inc.location_hint}</div>
                     <div class="popup-cat">${inc.district} • ${inc.datetime}</div>
-                    <div style="font-size:12px; margin-bottom:6px;">
+                    <div style="font-size:11px; margin-bottom:4px;">
                         Тип загрози: <b>${inc.threat_type}</b> (${inc.alert_level.toUpperCase()})<br>
                         Наслідки: <b>${inc.impact_type}</b><br>
                         Джерело: <i>${inc.source}</i>
@@ -864,18 +990,19 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             });
         }
 
-        // Threat Mode Handler
+        // Mode Toggler
         function setThreatMode(mode) {
             currentThreatMode = mode;
             document.querySelectorAll('.mode-btn').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.mode === mode);
             });
+            renderDistrictsPolygons();
             renderObjects();
             renderIncidents();
             renderObjectsList();
         }
 
-        // Category Filter Handler
+        // Category Filter
         function toggleCategoryFilter(cat) {
             const chip = document.querySelector(`.filter-chip[data-cat="${cat}"]`);
             if (activeCategories.has(cat)) {
@@ -889,12 +1016,23 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             renderObjectsList();
         }
 
-        // UI Tabs & Side Lists
+        // Tabs
         function switchPanelTab(tabId) {
             document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
             event.currentTarget.classList.add('active');
             document.getElementById(tabId).classList.add('active');
+        }
+
+        // Panel Close / Open
+        function closeSidePanel() {
+            document.getElementById('sidePanel').style.display = 'none';
+            document.getElementById('openSidePanelBtn').style.display = 'flex';
+        }
+
+        function openSidePanel() {
+            document.getElementById('sidePanel').style.display = 'flex';
+            document.getElementById('openSidePanelBtn').style.display = 'none';
         }
 
         function renderDistrictsList() {
@@ -910,7 +1048,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                         <p>${d.status} • Інцидентів: ${d.incidents_count}</p>
                     </div>
                     <div class="score-pill" style="background:${d.badge_color}33; color:${d.badge_color}; border:1px solid ${d.badge_color};">
-                        ${d.safety_score} безпека
+                        ${d.exposure_index} ризик
                     </div>
                 `;
                 container.appendChild(card);
@@ -952,7 +1090,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                         <h4>${inc.district}</h4>
                         <p>${inc.datetime.split(' ')[0]} • ${inc.location_hint}</p>
                     </div>
-                    <span style="font-size:11px; padding:3px 8px; border-radius:6px; background:#334155; color:#cbd5e1;">
+                    <span style="font-size:10px; padding:2px 6px; border-radius:4px; background:#334155; color:#cbd5e1;">
                         ${inc.threat_type.replace('drone_', '').replace('missile_', '')}
                     </span>
                 `;
@@ -960,7 +1098,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             });
         }
 
-        // Modal Handlers
+        // Modal
         function openAnalyticsModal() {
             document.getElementById('analyticsModal').classList.add('open');
             renderHourlyChart();
@@ -984,13 +1122,50 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 bar.style.flex = '1';
                 bar.style.height = `${Math.max(8, heightPct)}%`;
                 bar.style.background = col;
-                bar.style.borderRadius = '3px 3px 0 0';
+                bar.style.borderRadius = '2px 2px 0 0';
                 bar.title = `${hour}:00 - ${val} тривог`;
                 chart.appendChild(bar);
             });
         }
 
+        // Generic Draggable Helper
+        function makeDraggable(element, handle) {
+            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+            handle.onmousedown = dragMouseDown;
+
+            function dragMouseDown(e) {
+                if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
+                e.preventDefault();
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                document.onmouseup = closeDragElement;
+                document.onmousemove = elementDrag;
+            }
+
+            function elementDrag(e) {
+                e.preventDefault();
+                pos1 = pos3 - e.clientX;
+                pos2 = pos4 - e.clientY;
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                element.style.top = (element.offsetTop - pos2) + "px";
+                element.style.left = (element.offsetLeft - pos1) + "px";
+                element.style.right = 'auto';
+                element.style.bottom = 'auto';
+            }
+
+            function closeDragElement() {
+                document.onmouseup = null;
+                document.onmousemove = null;
+            }
+        }
+
+        // Initialize Dragging on Panels
+        makeDraggable(document.getElementById('sidePanel'), document.getElementById('panelDragHeader'));
+        makeDraggable(document.getElementById('topNavbar'), document.getElementById('topNavbar'));
+
         // Initial Boot
+        renderDistrictsPolygons();
         renderObjects();
         renderIncidents();
         renderDistrictsList();
@@ -1013,22 +1188,27 @@ def build_dashboard():
     ts_eval = ts_analyzer.run_temporal_evaluation()
 
     # 3. Load incidents
-    incidents_path = (
-        Path(__file__).resolve().parent.parent
-        / "data"
-        / "curated"
-        / "kyiv_incidents_3m.csv"
-    )
     incidents_df = risk_engine.incidents_df
     incidents_list = incidents_df.to_dict(orient="records")
 
-    # 4. Render Jinja template
+    # 4. Load districts geojson
+    districts_geojson_path = (
+        Path(__file__).resolve().parent.parent
+        / "data"
+        / "curated"
+        / "kyiv_districts.geojson"
+    )
+    with open(districts_geojson_path, "r", encoding="utf-8") as f:
+        districts_geojson = json.load(f)
+
+    # 5. Render Jinja template
     template = Template(HTML_TEMPLATE)
     html_content = template.render(
         risk_data_json=json.dumps(risk_data, ensure_ascii=False),
         ts_stats_json=json.dumps(ts_stats, ensure_ascii=False),
         ts_eval_json=json.dumps(ts_eval, ensure_ascii=False),
         incidents_json=json.dumps(incidents_list, ensure_ascii=False),
+        districts_geojson_json=json.dumps(districts_geojson, ensure_ascii=False),
     )
 
     out_file = Path(__file__).resolve().parent.parent / "index.html"
