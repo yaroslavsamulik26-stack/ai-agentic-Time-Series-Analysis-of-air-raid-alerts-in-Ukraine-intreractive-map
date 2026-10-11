@@ -61,9 +61,9 @@ def main():
 
     print(f"      Evaluated critical objects: {len(risk_data['objects'])}")
     print(f"      Ranked districts: {len(risk_data['districts'])}")
-    print("\n      Top Exposed Districts:")
+    print("\n      Top Safest Districts:")
     for d in risk_data["districts"][:3]:
-        print(f"        - #{d['threat_rank']} {d['district']}: Threat Index {d['exposure_index']} (Safety Score {d['safety_score']})")
+        print(f"        - #{d['safety_rank']} {d['district']}: Safety Score {d['safety_score']}% (Threat Index {d['exposure_index']})")
 
     # 4. Map Dashboard Generation
     print("\n[4/4] Building Interactive Web Dashboard (Leaflet + Google Maps Tiles)...")

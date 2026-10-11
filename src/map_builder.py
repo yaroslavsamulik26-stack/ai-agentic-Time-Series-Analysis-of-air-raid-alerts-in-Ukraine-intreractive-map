@@ -959,7 +959,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         </div>
 
         <div class="panel-tabs">
-            <div class="panel-tab active" onclick="switchPanelTab('tab-districts')">Райони (10)</div>
+            <div class="panel-tab active" onclick="switchPanelTab('tab-districts')">Райони (Топ безпеки)</div>
             <div class="panel-tab" onclick="switchPanelTab('tab-objects')">Об'єкти & ППО</div>
             <div class="panel-tab" onclick="switchPanelTab('tab-priority-targets')">Пріоритетні цілі & Прогноз</div>
             <div class="panel-tab" onclick="switchPanelTab('tab-notebooklm')">OSINT Зведення</div>
@@ -969,9 +969,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             <!-- Tab 1: District Rankings -->
             <div id="tab-districts" class="tab-pane active">
                 <div class="filter-section">
-                    <div class="section-title"><i class="fa-solid fa-shield-halved"></i> Рейтинг загрози районів Києва</div>
+                    <div class="section-title"><i class="fa-solid fa-shield-heart"></i> Рейтинг безпеки районів Києва</div>
                     <p style="font-size:10px; color:var(--text-muted); margin-bottom:8px;">
-                        Враховує щільність ударів, критичні об'єкти та оборонний периметр. Клікніть на район для фокусу.
+                        Відсортовано від найбезпечніших районів до найбільш ризикованих. Враховує ППО, щільність цілей та траєкторії загроз. Клікніть на район для фокусу.
                     </p>
                     <div id="districts-list">
                         <!-- Rendered by JS -->
@@ -1354,12 +1354,14 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 }
             });
 
-            // Recompute ranking for each threat mode based on adjusted exposure
+            // Recompute safety ranking for each threat mode (Rank #1 = Safest district)
             for (const m of ['all', 'yellow', 'orange', 'red']) {
-                const sorted = [...RISK_DATA.districts].sort((a, b) => (b.exposure_by_mode[m] || 0) - (a.exposure_by_mode[m] || 0));
+                const sorted = [...RISK_DATA.districts].sort((a, b) => (b.safety_by_mode[m] || 0) - (a.safety_by_mode[m] || 0));
                 sorted.forEach((d, idx) => {
                     if (d.rank_by_mode) d.rank_by_mode[m] = idx + 1;
+                    if (d.safety_rank_by_mode) d.safety_rank_by_mode[m] = idx + 1;
                     if (m === currentThreatMode || (currentThreatMode === 'all' && m === 'all')) {
+                        d.safety_rank = idx + 1;
                         d.threat_rank = idx + 1;
                     }
                 });
@@ -1612,16 +1614,18 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     const modeLabel = (currentThreatMode === 'yellow') ? 'Ударні БпЛА (Shahed)' :
                                       (currentThreatMode === 'red') ? 'Ракети (Крилаті / Балістика)' : 'Всі загрози';
 
+                    const safeCol = (safety >= 65) ? '#10b981' : (safety >= 50) ? '#38bdf8' : (safety >= 40) ? '#eab308' : '#f43f5e';
+
                     const popup = `
                         <div class="popup-title">${dName} район</div>
-                        <div class="popup-cat">Режим: <b>${modeLabel}</b> • Ранг загрози: #${rank}</div>
+                        <div class="popup-cat">Режим: <b>${modeLabel}</b> • Ранг безпеки: <b>#${rank} (Топ)</b></div>
                         <div class="popup-score-box">
-                            <span style="font-size:11px; color:#cbd5e1;">Індекс небезпеки:</span>
-                            <span class="popup-score-num" style="color:${col};">${exposure}/100</span>
+                            <span style="font-size:11px; color:#cbd5e1;">Рівень безпеки:</span>
+                            <span class="popup-score-num" style="color:${safeCol};">${safety}%</span>
                         </div>
                         <div style="font-size:11px; margin-bottom:4px;">
+                            Індекс ризику: <b>${exposure}/100</b><br>
                             Статус: <b style="color:${col};">${status}</b><br>
-                            Запас безпеки: <b>${safety}%</b><br>
                             Цільових об'єктів: <b>${stats.objects_count || 0}</b> | Сер. P<sub>Target</sub>: <b>${(stats.avg_target_prob && stats.avg_target_prob[modeKey] !== undefined) ? stats.avg_target_prob[modeKey] + '%' : '—'}</b>
                         </div>
                         <div class="popup-desc">${feature.properties.description || ''}</div>
@@ -1852,7 +1856,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     d.safety_score = d.safety_by_mode[modeKey];
                     if (d.status_by_mode) d.status = d.status_by_mode[modeKey];
                     if (d.badge_by_mode) d.badge_color = d.badge_by_mode[modeKey];
-                    if (d.rank_by_mode && d.rank_by_mode[modeKey]) d.threat_rank = d.rank_by_mode[modeKey];
+                    if (d.rank_by_mode && d.rank_by_mode[modeKey]) {
+                        d.safety_rank = d.rank_by_mode[modeKey];
+                        d.threat_rank = d.rank_by_mode[modeKey];
+                    }
                 }
             });
             renderDistrictsPolygons();
@@ -1904,19 +1911,20 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             container.innerHTML = '';
             const modeKey = (currentThreatMode === 'all') ? 'all' : currentThreatMode;
 
-            // Sort districts by active mode exposure descending
+            // Sort districts by active mode safety descending (safest at the top)
             const sortedDistricts = [...RISK_DATA.districts].sort((a, b) => {
-                const expA = (a.exposure_by_mode && a.exposure_by_mode[modeKey] !== undefined) ? a.exposure_by_mode[modeKey] : a.exposure_index;
-                const expB = (b.exposure_by_mode && b.exposure_by_mode[modeKey] !== undefined) ? b.exposure_by_mode[modeKey] : b.exposure_index;
-                return expB - expA;
+                const safeA = (a.safety_by_mode && a.safety_by_mode[modeKey] !== undefined) ? a.safety_by_mode[modeKey] : a.safety_score;
+                const safeB = (b.safety_by_mode && b.safety_by_mode[modeKey] !== undefined) ? b.safety_by_mode[modeKey] : b.safety_score;
+                return safeB - safeA; // Highest safety first
             });
 
             sortedDistricts.forEach((d, idx) => {
                 const exposure = (d.exposure_by_mode && d.exposure_by_mode[modeKey] !== undefined) ? d.exposure_by_mode[modeKey] : d.exposure_index;
+                const safety = (d.safety_by_mode && d.safety_by_mode[modeKey] !== undefined) ? d.safety_by_mode[modeKey] : d.safety_score;
                 const rank = (d.rank_by_mode && d.rank_by_mode[modeKey] !== undefined) ? d.rank_by_mode[modeKey] : (idx + 1);
                 const status = (d.status_by_mode && d.status_by_mode[modeKey] !== undefined) ? d.status_by_mode[modeKey] : d.status;
                 const badgeColor = (d.badge_by_mode && d.badge_by_mode[modeKey] !== undefined) ? d.badge_by_mode[modeKey] : d.badge_color;
-                const incCount = (d.incidents_by_mode && d.incidents_by_mode[modeKey] !== undefined) ? d.incidents_by_mode[modeKey] : d.incidents_count;
+                const safeColor = (safety >= 65) ? '#10b981' : (safety >= 50) ? '#38bdf8' : (safety >= 40) ? '#eab308' : '#f43f5e';
 
                 const card = document.createElement('div');
                 card.className = 'stat-card';
@@ -1929,8 +1937,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                         <h4>#${rank} ${d.district}</h4>
                         <p>${status} • Об'єктів цілей: ${d.objects_count || 0}</p>
                     </div>
-                    <div class="score-pill" style="background:${badgeColor}33; color:${badgeColor}; border:1px solid ${badgeColor};">
-                        ${exposure} ризик
+                    <div class="score-pill" style="background:${safeColor}22; color:${safeColor}; border:1px solid ${safeColor}; font-weight:700;">
+                        ${safety}% безпека
                     </div>
                 `;
                 container.appendChild(card);

@@ -661,24 +661,35 @@ class KyivRiskEngine:
                 data["status_by_mode"][m] = st
                 data["badge_by_mode"][m] = bd
 
-        # Compute rank by mode
-        rank_by_mode = {m: {} for m in ["all", "yellow", "orange", "red"]}
+        # Compute safety rank by mode (Rank #1 = Safest district, descending to #10 = Most exposed)
+        safety_rank_by_mode = {m: {} for m in ["all", "yellow", "orange", "red"]}
+        threat_rank_by_mode = {m: {} for m in ["all", "yellow", "orange", "red"]}
         for m in ["all", "yellow", "orange", "red"]:
-            sorted_districts = sorted(district_stats.values(), key=lambda x: x["exposure_by_mode"][m], reverse=True)
-            for r, item in enumerate(sorted_districts, start=1):
-                rank_by_mode[m][item["district"]] = r
+            # Safest first (safety_score descending, or exposure ascending)
+            sorted_safest = sorted(district_stats.values(), key=lambda x: x["safety_by_mode"][m], reverse=True)
+            for r, item in enumerate(sorted_safest, start=1):
+                safety_rank_by_mode[m][item["district"]] = r
+
+            # Threat rank (1 = most exposed)
+            sorted_threat = sorted(district_stats.values(), key=lambda x: x["exposure_by_mode"][m], reverse=True)
+            for r, item in enumerate(sorted_threat, start=1):
+                threat_rank_by_mode[m][item["district"]] = r
 
         results = []
         for d, data in district_stats.items():
-            data["rank_by_mode"] = {m: rank_by_mode[m][d] for m in ["all", "yellow", "orange", "red"]}
+            data["rank_by_mode"] = {m: safety_rank_by_mode[m][d] for m in ["all", "yellow", "orange", "red"]}
+            data["safety_rank_by_mode"] = data["rank_by_mode"]
+            data["threat_rank_by_mode"] = {m: threat_rank_by_mode[m][d] for m in ["all", "yellow", "orange", "red"]}
             data["exposure_index"] = data["exposure_by_mode"]["all"]
             data["safety_score"] = data["safety_by_mode"]["all"]
             data["status"] = data["status_by_mode"]["all"]
             data["badge_color"] = data["badge_by_mode"]["all"]
-            data["threat_rank"] = data["rank_by_mode"]["all"]
+            data["safety_rank"] = data["safety_rank_by_mode"]["all"]
+            data["threat_rank"] = data["threat_rank_by_mode"]["all"]
             results.append(data)
 
-        results = sorted(results, key=lambda x: x["exposure_index"], reverse=True)
+        # Sort districts by safety score descending (safest districts at the top)
+        results = sorted(results, key=lambda x: x["safety_score"], reverse=True)
         return results
 
 
@@ -694,6 +705,6 @@ if __name__ == "__main__":
         print(f"  - {obj['name']} ({obj['district']}): P_Target = {s['p_target']}% [{s['tier']}] "
               f"(CatWeight: {s['category_weight']}, Corridor: {s['corridor_proximity']}, Shield: {s['air_defense_pct']}%)")
 
-    print("\nTop 3 highest threat districts:")
+    print("\nTop 3 safest districts:")
     for d in data["districts"][:3]:
-        print(f"  #{d['threat_rank']} {d['district']}: Exposure Index {d['exposure_index']} (Safety Score {d['safety_score']})")
+        print(f"  #{d['safety_rank']} {d['district']}: Safety Score {d['safety_score']}% (Exposure Index {d['exposure_index']})")
