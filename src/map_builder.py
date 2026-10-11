@@ -961,8 +961,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             <i class="fa-solid fa-chart-line"></i> Time Series
         </button>
 
-        <button class="btn-action-small active" id="toggleSidePanelBtn" onclick="toggleSidePanel()" title="Відкрити/закрити аналітичну панель безпеки">
-            <i class="fa-solid fa-chart-pie"></i> Панель безпеки
+        <button class="btn-action-small active" id="toggleSidePanelBtn" onclick="toggleSidePanel()" title="Відкрити/закрити аналітичну панель оцінки небезпеки">
+            <i class="fa-solid fa-chart-pie"></i> Панель небезпеки
         </button>
 
         <!-- Top Category Filters Row -->
@@ -1003,8 +1003,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     </div>
 
     <!-- Reopen Floating Button (when panel is closed) -->
-    <button id="openSidePanelBtn" class="reopen-panel-btn" onclick="openSidePanel()" title="Відкрити аналітичну панель безпеки">
-        <i class="fa-solid fa-chart-pie"></i> Панель безпеки
+    <button id="openSidePanelBtn" class="reopen-panel-btn" onclick="openSidePanel()" title="Відкрити аналітичну панель оцінки небезпеки">
+        <i class="fa-solid fa-chart-pie"></i> Панель небезпеки
     </button>
 
     <!-- Side Intelligence Panel - Draggable & Closable -->
@@ -1017,7 +1017,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         </div>
 
         <div class="panel-tabs">
-            <div class="panel-tab active" onclick="switchPanelTab('tab-districts')">Райони (Топ безпеки)</div>
+            <div class="panel-tab active" onclick="switchPanelTab('tab-districts')">Райони (Рівень небезпеки)</div>
             <div class="panel-tab" onclick="switchPanelTab('tab-objects')">Об'єкти & ППО</div>
             <div class="panel-tab" onclick="switchPanelTab('tab-priority-targets')">Пріоритетні цілі & Прогноз</div>
             <div class="panel-tab" onclick="switchPanelTab('tab-notebooklm')">OSINT Зведення</div>
@@ -1027,9 +1027,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             <!-- Tab 1: District Rankings -->
             <div id="tab-districts" class="tab-pane active">
                 <div class="filter-section">
-                    <div class="section-title"><i class="fa-solid fa-shield-heart"></i> Рейтинг безпеки районів Києва</div>
+                    <div class="section-title"><i class="fa-solid fa-shield-halved"></i> Рівень небезпеки районів Києва</div>
                     <p style="font-size:10px; color:var(--text-muted); margin-bottom:8px;">
-                        Відсортовано від найбезпечніших районів до найбільш ризикованих. Враховує ППО, щільність цілей та траєкторії загроз. Клікніть на район для фокусу.
+                        Оцінка за рівнем небезпеки та ймовірністю ураження інфраструктури (враховує ППО, концентрацію цілей та вектори загроз). Клікніть на район для фокусу.
                     </p>
                     <div id="districts-list">
                         <!-- Rendered by JS -->
@@ -1141,11 +1141,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
     <!-- Legend Overlay -->
     <div class="map-legend">
-        <div style="font-weight:700; margin-bottom:2px; color:#cbd5e1;">Рівні безпеки & ризику:</div>
-        <div class="legend-item"><div class="legend-color" style="background:#10b981;"></div> &gt;65% Безпека (Помірний ризик)</div>
-        <div class="legend-item"><div class="legend-color" style="background:#eab308;"></div> 45-64% Безпека (Підвищений ризик)</div>
-        <div class="legend-item"><div class="legend-color" style="background:#ea580c;"></div> 35-44% Безпека (Високий ризик)</div>
-        <div class="legend-item"><div class="legend-color" style="background:#dc2626;"></div> &lt;35% Безпека (Критичний ризик)</div>
+        <div style="font-weight:700; margin-bottom:2px; color:#cbd5e1;">Рівень небезпеки районів:</div>
+        <div class="legend-item"><div class="legend-color" style="background:#dc2626;"></div> &gt;70%: Критичний рівень небезпеки</div>
+        <div class="legend-item"><div class="legend-color" style="background:#ea580c;"></div> 60-69%: Високий рівень небезпеки</div>
+        <div class="legend-item"><div class="legend-color" style="background:#eab308;"></div> 45-59%: Підвищений рівень небезпеки</div>
+        <div class="legend-item"><div class="legend-color" style="background:#10b981;"></div> &lt;45%: Помірний рівень небезпеки</div>
         <div style="margin-top:4px; border-top:1px solid rgba(255,255,255,0.1); padding-top:4px; display:flex; flex-direction:column; gap:3px;">
             <div class="legend-item"><i class="fa-solid fa-crosshairs" style="color:#ef4444; font-size:10px;"></i> Уцілілі цілі (P<sub>Target</sub> прогноз)</div>
             <div class="legend-item"><i class="fa-solid fa-shield-halved" style="color:#10b981; font-size:10px;"></i> Ешелон ППО & турелі</div>
@@ -1684,13 +1684,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
                     const popup = `
                         <div class="popup-title">${dName} район</div>
-                        <div class="popup-cat">Режим: <b>${modeLabel}</b> • Ранг безпеки: <b>#${rank} (Топ)</b></div>
+                        <div class="popup-cat">Режим: <b>${modeLabel}</b> • Ранг небезпеки: <b>#${rank}</b></div>
                         <div class="popup-score-box">
-                            <span style="font-size:11px; color:#cbd5e1;">Рівень безпеки:</span>
-                            <span class="popup-score-num" style="color:${safeCol};">${safety}%</span>
+                            <span style="font-size:11px; color:#cbd5e1;">Рівень небезпеки:</span>
+                            <span class="popup-score-num" style="color:${col};">${exposure}/100</span>
                         </div>
                         <div style="font-size:11px; margin-bottom:4px;">
-                            Індекс ризику: <b>${exposure}/100</b><br>
+                            Ймовірність ураження: <b style="color:${col};">${exposure}%</b><br>
                             Статус: <b style="color:${col};">${status}</b><br>
                             Цільових об'єктів: <b>${stats.objects_count || 0}</b> | Сер. P<sub>Target</sub>: <b>${(stats.avg_target_prob && stats.avg_target_prob[modeKey] !== undefined) ? stats.avg_target_prob[modeKey] + '%' : '—'}</b>
                         </div>
@@ -2039,13 +2039,14 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     map.flyTo([d.center_lat, d.center_lon], 13);
                     if (districtLayerMap[d.district]) districtLayerMap[d.district].openPopup();
                 };
+                const expColor = getScoreColor(exposure);
                 card.innerHTML = `
                     <div class="district-info">
                         <h4>#${rank} ${d.district}</h4>
                         <p>${status} • Об'єктів цілей: ${d.objects_count || 0}</p>
                     </div>
-                    <div class="score-pill" style="background:${safeColor}22; color:${safeColor}; border:1px solid ${safeColor}; font-weight:700;">
-                        ${safety}% безпека
+                    <div class="score-pill" style="background:${expColor}22; color:${expColor}; border:1px solid ${expColor}; font-weight:700;">
+                        ${exposure}% небезпека
                     </div>
                 `;
                 container.appendChild(card);
