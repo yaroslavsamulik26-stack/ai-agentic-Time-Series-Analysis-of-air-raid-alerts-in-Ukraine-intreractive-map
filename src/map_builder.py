@@ -1141,11 +1141,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
     <!-- Legend Overlay -->
     <div class="map-legend">
-        <div style="font-weight:700; margin-bottom:2px; color:#cbd5e1;">Рівень небезпеки районів:</div>
-        <div class="legend-item"><div class="legend-color" style="background:#dc2626;"></div> 70-100: Критичний ризик</div>
-        <div class="legend-item"><div class="legend-color" style="background:#ea580c;"></div> 60-69: Високий ризик</div>
-        <div class="legend-item"><div class="legend-color" style="background:#eab308;"></div> 45-59: Підвищений ризик</div>
-        <div class="legend-item"><div class="legend-color" style="background:#10b981;"></div> 0-44: Помірний ризик</div>
+        <div style="font-weight:700; margin-bottom:2px; color:#cbd5e1;">Рівні безпеки & ризику:</div>
+        <div class="legend-item"><div class="legend-color" style="background:#10b981;"></div> &gt;65% Безпека (Помірний ризик)</div>
+        <div class="legend-item"><div class="legend-color" style="background:#eab308;"></div> 45-64% Безпека (Підвищений ризик)</div>
+        <div class="legend-item"><div class="legend-color" style="background:#ea580c;"></div> 35-44% Безпека (Високий ризик)</div>
+        <div class="legend-item"><div class="legend-color" style="background:#dc2626;"></div> &lt;35% Безпека (Критичний ризик)</div>
         <div style="margin-top:4px; border-top:1px solid rgba(255,255,255,0.1); padding-top:4px; display:flex; flex-direction:column; gap:3px;">
             <div class="legend-item"><i class="fa-solid fa-crosshairs" style="color:#ef4444; font-size:10px;"></i> Уцілілі цілі (P<sub>Target</sub> прогноз)</div>
             <div class="legend-item"><i class="fa-solid fa-shield-halved" style="color:#10b981; font-size:10px;"></i> Ешелон ППО & турелі</div>
