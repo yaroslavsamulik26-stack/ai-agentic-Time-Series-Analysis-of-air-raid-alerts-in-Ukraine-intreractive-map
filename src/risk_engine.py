@@ -37,7 +37,13 @@ class KyivRiskEngine:
     def load_data(self):
         infra_path = self.data_dir / "kyiv_infrastructure.geojson"
         districts_path = self.data_dir / "kyiv_districts.geojson"
-        incidents_path = self.data_dir / "kyiv_incidents_3m.csv"
+        
+        # Check processed unified incidents first
+        processed_incidents = Path(__file__).resolve().parent.parent / "data" / "processed" / "incidents_unified.csv"
+        if processed_incidents.exists():
+            incidents_path = processed_incidents
+        else:
+            incidents_path = self.data_dir / "kyiv_incidents_3m.csv"
 
         with open(infra_path, "r", encoding="utf-8") as f:
             self.infra_geojson = json.load(f)

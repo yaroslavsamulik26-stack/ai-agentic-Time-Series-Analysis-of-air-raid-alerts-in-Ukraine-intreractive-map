@@ -32,10 +32,11 @@ def main():
     print("\n[1/4] Ingesting and unifying datasets...")
     ingestion = KyivDataIngestionPipeline(base_dir=PROJECT_ROOT)
     ingestion_stats = ingestion.run_pipeline()
-    print(f"      Unified incidents: {ingestion_stats['incidents_count']}")
-    print(f"      Alert records: {ingestion_stats['alerts_count']}")
-    print(f"      Custom Telegram files parsed: {ingestion_stats['custom_tg_files_found']}")
-    print(f"      Custom OSINT files parsed: {ingestion_stats['custom_osint_files_found']}")
+    print(f"      Unified incidents: {ingestion_stats.get('incidents_count', 0)}")
+    print(f"      Alert records: {ingestion_stats.get('alerts_count', 0)}")
+    print(f"      Custom Telegram files parsed: {ingestion_stats.get('custom_tg_files_found', 0)}")
+    if 'notebooklm_export_ready' in ingestion_stats:
+        print(f"      NotebookLM export ready: {ingestion_stats['notebooklm_export_ready']}")
 
     # 2. Time Series Modeling & Leak-free Evaluation
     print("\n[2/4] Running Time Series Modeling & Leak-Free Temporal Evaluation...")
