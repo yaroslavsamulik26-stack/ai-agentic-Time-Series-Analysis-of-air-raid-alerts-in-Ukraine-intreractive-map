@@ -199,13 +199,22 @@ class TestKyivDefensePipeline(unittest.TestCase):
                 self.assertLessEqual(d["exposure_by_mode"][m], 100.0)
                 self.assertIn(m, d["rank_by_mode"])
 
-        # Verify threat mode scores for objects
+        # Verify threat mode scores and P_Target for objects
         for obj in results["objects"]:
             scores = obj["scores"]
             for mode in ["yellow", "orange", "red", "all"]:
                 self.assertIn(mode, scores)
                 self.assertGreaterEqual(scores[mode]["score"], 0.0)
                 self.assertLessEqual(scores[mode]["score"], 100.0)
+                self.assertIn("p_target", scores[mode])
+                self.assertGreaterEqual(scores[mode]["p_target"], 0.0)
+                self.assertLessEqual(scores[mode]["p_target"], 100.0)
+                self.assertIn("category_weight", scores[mode])
+                self.assertIn("corridor_proximity", scores[mode])
+                self.assertIn("air_defense", scores[mode])
+
+        self.assertIn("authoritative_sources", results)
+        self.assertIn("historical_target_analysis", results)
 
     def test_haversine_distance(self):
         """Verify spatial kernel distance function."""
@@ -260,6 +269,18 @@ class TestKyivDefensePipeline(unittest.TestCase):
         self.assertIn("modal-nblm-missiles", content)
         self.assertIn("modal-nblm-shahed", content)
 
+        # Verify elimination of incident pin layers completely from map
+        self.assertNotIn("incidentsLayerGroup", content, "incidentsLayerGroup must be completely removed")
+        self.assertIn("tab-priority-targets", content, "Priority targets tab must be present")
+        self.assertIn("Пріоритетні цілі & Прогноз", content, "Priority targets label must be present")
+        self.assertIn("P_Target", content)
+
+        # Authoritative data sources formalization in UI
+        self.assertIn("alerts.in.ua", content)
+        self.assertIn("КМВА", content)
+        self.assertIn("ДСНС", content)
+        self.assertIn("Russia Will Pay", content)
+
         # Ensure obsolete Dark Map tile is completely absent
         self.assertNotIn("cartocdn", content.lower(), "CartoDB / Dark map tiles should be eliminated")
 
@@ -281,12 +302,13 @@ class TestKyivDefensePipeline(unittest.TestCase):
         self.assertIn("Балістична ракета", content)
         self.assertIn("Крилата ракета", content)
 
-        # Structured concise popup fields (R4)
-        self.assertIn("<b>Локація:</b>", content)
-        self.assertIn("<b>Час:</b>", content)
-        self.assertIn("<b>Тип загрози:</b>", content)
-        self.assertIn("<b>Наслідки:</b>", content)
-        self.assertIn("<b>Джерело:</b>", content)
+        # Structured concise popup fields for critical target facilities
+        self.assertIn("<b>Район:</b>", content)
+        self.assertIn("<b>Категорія:</b>", content)
+        self.assertIn("<b>Ймовірність ураження:</b>", content)
+        self.assertIn("<b>Пріоритетність цілі:</b>", content)
+        self.assertIn("<b>Захист ППО:</b>", content)
+        self.assertIn("<b>Опис об'єкта:</b>", content)
 
         # Ensure no repetitive location strings like "Дарницький, Дарницький"
         self.assertNotIn("Дарницький, Дарницький", content)

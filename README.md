@@ -24,38 +24,55 @@ This project combines **leak-free Time Series forecasting** of alert hazard prob
 1. **Strict Leak-Free Time Series Modeling (Zero Data Leakage):**
    - 6-Month analytical horizon: 169 alert episodes from April 11 to October 11, 2026.
    - Chronological temporal train/test split: Training on alerts up to August 31, 2026; holdout evaluation on September 1 – October 11, 2026.
-   - All features at time $T$ (historical alert density, time elapsed since previous raid, cyclical harmonic diurnal phases) are strictly backward-looking.
+   - All features at time $T$ (historical alert density, inter-alert intervals, cyclical harmonic diurnal phases) are strictly backward-looking.
    - Outperforms baseline empirical frequency: **ROC-AUC: 0.651**, **Brier Score: 0.235**.
-2. **Multi-Factor Facility Risk Scoring ($0–100$):**
-   - Real-time risk index for 44 critical Kyiv infrastructure facilities across energy (TECs, substations), transport (bridges, railway hubs), administration, and defense manufacturing.
-   - Incorporates spatial kernel proximity decay to confirmed strike/debris points over the past 6 months (835 verified events).
+2. **Predictive Target Probability Engine ($P_{\text{Target}}$):**
+   - **Complete elimination of misleading strike/debris point pins**: In accordance with operational security (OPSEC) and data veracity, official releases publish data at the district level without disclosing exact coordinates.
+   - Replaces uncertain pins with a two-layer hybrid predictive engine that estimates strike probability $P_{\text{Target}}(i, t, m) \in [0\%, 100\%]$ for 44 intact critical facilities (energy, transport, defense industry, admin).
+   - Combines Time-Series Hazard $H(t, m)$, Strategic Target Prioritization $[\alpha \cdot \text{CategoryWeight} + \beta \cdot \text{Criticality} + \gamma \cdot \text{CorridorProximity}]$, and multi-layered Air Defense Shielding $(1 - \text{AirDefense})$.
 3. **Calibrated District Hazard Index & Gapless 10-District Coverage:**
-   - 100% seamless, contiguous OpenStreetMap administrative polygons for all 10 Kyiv districts (Right and Left banks) with zero unpartitioned gaps.
-   - Logarithmically calibrated risk scoring reflecting actual strike distribution across all 10 administrative sectors.
+   - 100% seamless, contiguous OpenStreetMap administrative polygons for all 10 Kyiv districts with zero topological gaps.
+   - Aligns district threat scores with the density and criticality of intact infrastructure targets and local air defense shielding.
 4. **Interactive Standalone Web Dashboard (`index.html`):**
-   - Built on Leaflet with Google Maps Roadmap and Google Satellite tiles.
-   - 100% Ukrainian terminology localization (no raw English technical tags like `drone_shahed` or `debris_fall`).
-   - Compact, structured, and factual incident popups (location, time, threat type, verified consequence fact, official source).
-   - Unified Shahed category: 3 clean threat modes: **«Всі загрози»**, **«Ударні БпЛА (Shahed)»**, **«Ракети»**.
-   - Interactive time-range selector defaulting to last 7 days (`7 днів`, `30 днів`, `Всі (6 міс)`).
+   - Built on Leaflet with Google Maps Roadmap and Google Satellite tiles (Dark tiles eliminated).
+   - 100% Ukrainian terminology localization.
+   - Interactive sidebar with **«Пріоритетні цілі & Прогноз»** ranking intact facilities by $P_{\text{Target}}$ descending.
+   - Tactical / Operational / Strategic horizon switcher (`24 год`, `7 днів`, `30 днів`).
    - Runs out-of-the-box in any browser with zero API keys or external server dependencies.
 5. **Universal Multi-Source Ingestion (`src/parser.py`):**
    - Supports Telegram Desktop JSON exports (`result.json`), NotebookLM/Perplexity OSINT text and Markdown dumps, and official alerts archives.
 
 ---
 
-## 📐 Mathematical Formulation
+## 📚 Офіційні джерела даних & Репозиторії (Authoritative Data Sources)
 
-The risk score $\text{RiskScore}_i(m)$ for infrastructure facility $i$ under threat mode $m \in \{\text{Yellow}, \text{Red}\}$ is defined as:
+Проєкт оперує виключно верифікованими першоджерелами:
+1. **Командування Повітряних Сил ЗСУ (Official Air Force Releases):** Щоденні оперативні зведення про кількість, типи запущених (Shahed-136/238, Х-101/Калібр, Іскандер-М/KN-23, Кинджал) та перехоплених засобів повітряного нападу.
+2. **Київська міська військова адміністрація (КМВА) та ДСНС України (SES District Briefings):** Офіційні зведення про наслідки атак, залучення мобільних вогневих груп і ліквідацію пожеж на рівні 10 адміністративних районів столиці (без розголошення точних чутливих координат).
+3. **Відкритий архів часових рядів тривог (`alerts.in.ua`):** Верифіковані часові ряди початку, відбою та тривалості повітряних тривог для Time Series моделювання без data leakage.
+4. **KSE Institute («Росія заплатить» / Russia Will Pay):** Аналітична база верифікованих руйнувань об'єктів енергетики (ТЕЦ, магістральні підстанції 330/110 кВ, мости).
+5. **OpenStreetMap Boundaries:** Офіційні адміністративні межі 10 районів міста Києва.
 
-$$\text{RiskScore}_i(m) = \min\left(100, \, w_{\text{vuln}} \cdot V_i(m) + w_{\text{prox}} \cdot P_i(m) + w_{\text{time}} \cdot T(h, m) + w_{\text{dist}} \cdot D_i\right)$$
+---
+
+## 📐 Mathematical Formulation (Model 4: Two-layer Hybrid Predictive Model)
+
+Predicted strike probability $P_{\text{Target}}(i, t, m)$ for intact infrastructure facility $i$ under threat mode $m \in \{\text{Yellow}, \text{Red}, \text{All}\}$ and forecast horizon $t$ is defined as:
+
+$$P_{\text{Target}}(i, t, m) = H(t, m) \times \left[\alpha \cdot \text{CategoryWeight}(k_i, m) + \beta \cdot \text{Criticality}(i) + \gamma \cdot \text{CorridorProximity}(i)\right] \times \left(1 - \text{AirDefense}(i, m)\right)$$
 
 Where:
-- $V_i(m) \in [0, 40]$: Baseline facility vulnerability and target prioritization for weapon type $m$.
-- $P_i(m) \in [0, 30]$: Spatial kernel proximity to confirmed impacts and debris falls over the last 90 days:
-  $$P_i(m) = \sum_{j \in \text{Incidents}(m)} \exp\left(-\frac{\text{dist}(i, j)^2}{2\sigma^2}\right)$$
-- $T(h, m) \in [0, 20]$: Time-series diurnal hazard coefficient for hour $h$ and weapon $m$.
-- $D_i \in [0, 10]$: Historical incident density within the facility's administrative district.
+- **$H(t, m) \in [0.55, 1.0]$:** Time-series hazard factor derived from alert diurnal cycles and temporal frequency for prediction horizon $t \in \{\text{24h}, \text{7d}, \text{30d}\}$.
+- **$\text{CategoryWeight}(k_i, m) \in [0, 100]$:** Empirical targeting weight derived from 6-month historical strike analysis (835 events: Energy 68.2%, Defense Industry 17.8%, Transport 9.1%, Admin 4.9%).
+  - Energy (TECs, 330kV substations): 96.0 (Yellow), 92.0 (Red)
+  - Defense Industry (Artem, Luch, Antonov): 72.0 (Yellow), 96.0 (Red)
+  - Admin & Telecom: 48.0 (Yellow), 95.0 (Red)
+  - Transport (Bridges, Rail Hubs): 68.0 (Yellow), 82.0 (Red)
+- **$\text{Criticality}(i) \in [0, 100]$:** Normalized facility criticality based on operational capacity and vulnerability.
+- **$\text{CorridorProximity}(i) \in [0, 100]$:** Spatial kernel proximity to 5 verified inbound attack corridors (Vyshhorod-Dnipro, Zhytomyr, Obukhiv, Boryspil, Brovary):
+  $$\text{CorridorProximity}(i) = 100 \cdot \exp\left(-\frac{\text{dist}_{\min}(i)^2}{2\sigma^2}\right), \quad \sigma = 3.5\text{ km}$$
+- **$\alpha = 0.40, \; \beta = 0.35, \; \gamma = 0.25$:** Normalized strategic weights ($\alpha + \beta + \gamma = 1.0$).
+- **$\text{AirDefense}(i, m) \in [0.25, 0.82]$:** Multi-layered defense shielding coefficient (Patriot dome over Pechersk/center, automated turret lines on North/West/South perimeters). Intact facilities under air defense coverage have their strike probability mitigated by $(1 - \text{AirDefense})$.
 
 ---
 
