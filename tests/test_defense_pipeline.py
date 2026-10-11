@@ -67,6 +67,38 @@ class TestKyivDefensePipeline(unittest.TestCase):
         self.assertEqual(t_cr, "missile_cruise")
         self.assertEqual(lvl_cr, "red")
 
+        # Generic missile and debris report (must be RED, not misclassified as Shahed)
+        t_gen, lvl_gen = self.parser.classify_threat("У Подільському районі влучання ракети у складські приміщення")
+        self.assertEqual(t_gen, "missile_cruise")
+        self.assertEqual(lvl_gen, "red")
+
+        t_deb, lvl_deb = self.parser.classify_threat("Падіння уламків ракети у Дарницькому районі")
+        self.assertEqual(t_deb, "missile_cruise")
+        self.assertEqual(lvl_deb, "red")
+
+        # Shahed-238 (Jet) without 'реактивний' keyword
+        t_s238, lvl_s238 = self.parser.classify_threat("Зафіксовано рух швидкісного Shahed-238")
+        self.assertEqual(t_s238, "drone_jet")
+        self.assertEqual(lvl_s238, "orange")
+
+        # Kinzhal / Ballistic variants
+        t_kz, lvl_kz = self.parser.classify_threat("Пуск кинжал по урядовому кварталу")
+        self.assertEqual(t_kz, "missile_ballistic")
+        self.assertEqual(lvl_kz, "red")
+
+        # Decoy / Gerber / Parus
+        t_dec, lvl_dec = self.parser.classify_threat("Атака дрона-приманки Гербера без бойової частини")
+        self.assertEqual(t_dec, "drone_decoy")
+        self.assertEqual(lvl_dec, "yellow")
+
+    def test_dniprovskyi_and_desnyanskyi_filtering(self):
+        """Verify Dniprovskyi and Desnyanskyi districts are correctly extracted and not false-filtered."""
+        d_dnipro = self.parser.extract_districts("У Дніпровському районі падіння уламків на прибудинкову територію")
+        self.assertIn("Дніпровський", d_dnipro)
+
+        d_desna = self.parser.extract_districts("У Деснянському районі зафіксовано пожежу покрівлі")
+        self.assertIn("Деснянський", d_desna)
+
     def test_processed_incidents_dataset(self):
         """Verify processed incidents CSV schema, non-emptiness, and coordinates."""
         self.assertTrue(cls_file_exists := self.incidents_path.exists(), "incidents_unified.csv does not exist")
@@ -86,6 +118,10 @@ class TestKyivDefensePipeline(unittest.TestCase):
         self.assertIn("yellow", alert_levels)
         self.assertIn("red", alert_levels)
         self.assertIn("orange", alert_levels)
+
+        # Verified significant missile presence
+        red_count = (df["alert_level"] == "red").sum()
+        self.assertGreaterEqual(red_count, 50, f"Expected at least 50 missile/ballistic strikes, got {red_count}")
 
     # --- 2. Risk Engine & Infrastructure Tests ---
     def test_infrastructure_curated_data(self):
@@ -122,6 +158,15 @@ class TestKyivDefensePipeline(unittest.TestCase):
             self.assertGreaterEqual(d["exposure_index"], 0.0)
             self.assertLessEqual(d["exposure_index"], 100.0)
             self.assertAlmostEqual(d["exposure_index"] + d["safety_score"], 100.0, places=1)
+
+            # Verify mode-specific exposure indices exist
+            self.assertIn("exposure_by_mode", d)
+            self.assertIn("rank_by_mode", d)
+            for m in ["all", "yellow", "orange", "red"]:
+                self.assertIn(m, d["exposure_by_mode"])
+                self.assertGreaterEqual(d["exposure_by_mode"][m], 0.0)
+                self.assertLessEqual(d["exposure_by_mode"][m], 100.0)
+                self.assertIn(m, d["rank_by_mode"])
 
         # Verify threat mode scores for objects
         for obj in results["objects"]:
@@ -171,6 +216,10 @@ class TestKyivDefensePipeline(unittest.TestCase):
         self.assertIn("Google Satellite", content)
         self.assertIn("Реактивні БпЛА", content)
         self.assertIn("Ешелони ППО & Турелі", content)
+        self.assertIn("NOTEBOOKLM_DIGEST", content)
+        self.assertIn("copyNotebookLMDigest", content)
+        self.assertIn("corridor-flow", content)
+        self.assertIn("modal-nblm-missiles", content)
 
         # Ensure obsolete Dark Map tile is completely absent
         self.assertNotIn("cartocdn", content.lower(), "CartoDB / Dark map tiles should be eliminated")

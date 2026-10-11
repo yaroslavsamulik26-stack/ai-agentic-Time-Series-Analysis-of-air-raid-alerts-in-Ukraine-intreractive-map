@@ -195,16 +195,33 @@ class KyivRiskEngine:
         }
 
     def _compute_district_rankings(self, enriched_objects: list, incidents_by_district: dict) -> list:
+        # Group incidents by district and alert level
+        incidents_by_dist_level = {}
+        if not self.incidents_df.empty and "alert_level" in self.incidents_df.columns:
+            for (dist, lvl), count in self.incidents_df.groupby(["district", "alert_level"]).size().items():
+                incidents_by_dist_level.setdefault(dist, {})[lvl] = count
+
         district_stats = {}
         for feat in self.districts_geojson["features"]:
             d_props = feat["properties"]
             name = d_props["district"]
+            d_yellow = incidents_by_dist_level.get(name, {}).get("yellow", 0)
+            d_orange = incidents_by_dist_level.get(name, {}).get("orange", 0)
+            d_red = incidents_by_dist_level.get(name, {}).get("red", 0)
+            d_all = incidents_by_district.get(name, 0)
+
             district_stats[name] = {
                 "district": name,
                 "center_lat": d_props["center_lat"],
                 "center_lon": d_props["center_lon"],
                 "description": d_props["description"],
-                "incidents_count": incidents_by_district.get(name, 0),
+                "incidents_count": d_all,
+                "incidents_by_mode": {
+                    "all": d_all,
+                    "yellow": d_yellow,
+                    "orange": d_orange,
+                    "red": d_red,
+                },
                 "objects_count": 0,
                 "avg_yellow_score": 0.0,
                 "avg_orange_score": 0.0,
@@ -219,7 +236,6 @@ class KyivRiskEngine:
                 district_stats[d]["avg_orange_score"] += obj["scores"]["orange"]["score"]
                 district_stats[d]["avg_red_score"] += obj["scores"]["red"]["score"]
 
-        results = []
         for d, data in district_stats.items():
             cnt = data["objects_count"]
             if cnt > 0:
@@ -231,67 +247,94 @@ class KyivRiskEngine:
                 data["avg_orange_score"] = 45.0
                 data["avg_red_score"] = 45.0
 
-            # High-contrast relative incident scaling based on actual strikes/debris
-            # Prevents artificial score saturation and provides clear visual/risk contrast
-            all_incident_counts = [d_info["incidents_count"] for d_info in district_stats.values()]
-            min_c = min(all_incident_counts) if all_incident_counts else 0
-            max_c = max(all_incident_counts) if all_incident_counts else 1
+        # Strategic Infrastructure & target density weights
+        infra_weights = {
+            "Солом'янський": 17.0,  # Вокзал, Жуляни, МОУ / Генштаб, хаб «Шайба», ПС «Вокзальна»
+            "Голосіївський": 17.5,   # ТЕЦ-5, ПС «Новокиївська», нафтобаза Корчувате, Kärcher, ППО «Південь»
+            "Оболонський": 17.0,     # Київська ГЕС, Північний міст, ПС «Оболонь», ПММ Богатирська, човнова база, ППО «Північ»
+            "Дарницький": 15.5,      # ПС «Позняки», Дарницький вокзал, нафтохаб Бортничі, Південний міст
+            "Шевченківський": 16.5,  # ДАХК «Артем», ДержККБ «Луч», Охматдит, Телевежа, «Київстар», Довженка, КМДА
+            "Подільський": 12.5,     # ПС «Північна», Куренівська промзона, «Фармак», Виноградар
+            "Святошинський": 13.0,   # ДП «Антонов» (Святошинський авіакомплекс), ППО «Захід»
+            "Деснянський": 9.5,      # ТЕЦ-6, Деснянська водопровідна станція
+            "Дніпровський": 8.5,     # Дарницька ТЕЦ, депо «Дарниця», Комфорт Таун, мости
+            "Печерський": 7.5,       # Урядовий квартал, Військовий госпіталь (ешелон Patriot/ППО)
+        }
 
-            if max_c > min_c:
-                # Logarithmic normalization handles heavy-tailed strike counts
-                norm_inc = (math.log(1 + data["incidents_count"]) - math.log(1 + min_c)) / (
-                    math.log(1 + max_c) - math.log(1 + min_c)
-                )
-            else:
-                norm_inc = 0.5
+        # Calculate exposure for each mode across districts
+        for m in ["all", "yellow", "orange", "red"]:
+            all_counts = [district_stats[k]["incidents_by_mode"][m] for k in district_stats]
+            min_c = min(all_counts) if all_counts else 0
+            max_c = max(all_counts) if all_counts else 1
 
-            # Incident intensity points: 0 to 48 pts
-            inc_pts = norm_inc * 48.0
+            for d, data in district_stats.items():
+                c = data["incidents_by_mode"][m]
+                if max_c > min_c:
+                    norm_inc = (math.log(1 + c) - math.log(1 + min_c)) / (math.log(1 + max_c) - math.log(1 + min_c))
+                else:
+                    norm_inc = 0.5
 
-            # Strategic Infrastructure & target density bonus: up to 18 pts
-            infra_weights = {
-                "Солом'янський": 17.0,  # Вокзал, Жуляни, МОУ / Генштаб, хаб «Шайба», ПС «Вокзальна»
-                "Голосіївський": 17.5,   # ТЕЦ-5, ПС «Новокиївська», нафтобаза Корчувате, Kärcher, ППО «Південь»
-                "Оболонський": 17.0,     # Київська ГЕС, Північний міст, ПС «Оболонь», ПММ Богатирська, човнова база, ППО «Північ»
-                "Дарницький": 15.5,      # ПС «Позняки», Дарницький вокзал, нафтохаб Бортничі, Південний міст
-                "Шевченківський": 16.5,  # ДАХК «Артем», ДержККБ «Луч», Охматдит, Телевежа, «Київстар», Довженка, КМДА
-                "Подільський": 12.5,     # ПС «Північна», Куренівська промзона, «Фармак», Виноградар
-                "Святошинський": 13.0,   # ДП «Антонов» (Святошинський авіакомплекс), ППО «Захід»
-                "Деснянський": 9.5,      # ТЕЦ-6, Деснянська водопровідна станція
-                "Дніпровський": 8.5,     # Дарницька ТЕЦ, депо «Дарниця», Комфорт Таун, мости
-                "Печерський": 7.5,       # Урядовий квартал, Військовий госпіталь (ешелон Patriot/ППО)
-            }
-            infra_pts = infra_weights.get(d, 8.0)
+                inc_pts = norm_inc * 48.0
+                base_infra = infra_weights.get(d, 8.0)
 
-            # Base wartime threat floor: 25.0 pts (any district in Kyiv has background risk during air alarms)
-            raw_exposure = 25.0 + inc_pts + infra_pts
-            exposure_index = round(min(95.0, max(20.0, raw_exposure)), 1)
-            data["exposure_index"] = exposure_index
+                if m == "yellow":
+                    infra_m = base_infra * 0.95 + (data["avg_yellow_score"] - 45.0) * 0.15
+                elif m == "orange":
+                    infra_m = base_infra * 0.90 + (data["avg_orange_score"] - 45.0) * 0.20
+                elif m == "red":
+                    infra_m = base_infra * 1.05 + (data["avg_red_score"] - 45.0) * 0.15
+                else:
+                    infra_m = base_infra
 
-            # Safety score (100 - exposure) reflects residual safety margin
-            data["safety_score"] = round(max(5.0, 100.0 - exposure_index), 1)
+                raw_exposure = 25.0 + inc_pts + infra_m
+                exp_val = round(min(95.0, max(20.0, raw_exposure)), 1)
+                safety_val = round(max(5.0, 100.0 - exp_val), 1)
 
-            # Strict realistic defense tiers with distinctive visual separation
-            if exposure_index >= 75:
-                data["status"] = "КРИТИЧНИЙ РИЗИК (масовані удари, пріоритетні оборонні цілі)"
-                data["badge_color"] = "#dc2626"
-            elif exposure_index >= 60:
-                data["status"] = "ВИСОКИЙ РИЗИК (коридори дронів, ТЕЦ / стратегічні підстанції)"
-                data["badge_color"] = "#ea580c"
-            elif exposure_index >= 45:
-                data["status"] = "ПІДВИЩЕНИЙ РИЗИК (падіння уламків збиттів, вузловий транспорт)"
-                data["badge_color"] = "#eab308"
-            else:
-                data["status"] = "ВІДНОСНО ПОМІРНИЙ РИЗИК (мінімальна кількість влучань/уламків)"
-                data["badge_color"] = "#10b981"
+                if "exposure_by_mode" not in data:
+                    data["exposure_by_mode"] = {}
+                    data["safety_by_mode"] = {}
+                    data["status_by_mode"] = {}
+                    data["badge_by_mode"] = {}
 
+                data["exposure_by_mode"][m] = exp_val
+                data["safety_by_mode"][m] = safety_val
+
+                if exp_val >= 75:
+                    st = "КРИТИЧНИЙ РИЗИК (масовані удари, пріоритетні оборонні цілі)"
+                    bd = "#dc2626"
+                elif exp_val >= 60:
+                    st = "ВИСОКИЙ РИЗИК (коридори підльоту, ТЕЦ / стратегічні підстанції)"
+                    bd = "#ea580c"
+                elif exp_val >= 45:
+                    st = "ПІДВИЩЕНИЙ РИЗИК (падіння уламків збиттів, вузловий транспорт)"
+                    bd = "#eab308"
+                else:
+                    st = "ВІДНОСНО ПОМІРНИЙ РИЗИК (мінімальна кількість влучань/уламків)"
+                    bd = "#10b981"
+
+                data["status_by_mode"][m] = st
+                data["badge_by_mode"][m] = bd
+
+        # Compute rank by mode
+        rank_by_mode = {m: {} for m in ["all", "yellow", "orange", "red"]}
+        for m in ["all", "yellow", "orange", "red"]:
+            sorted_districts = sorted(district_stats.values(), key=lambda x: x["exposure_by_mode"][m], reverse=True)
+            for r, item in enumerate(sorted_districts, start=1):
+                rank_by_mode[m][item["district"]] = r
+
+        results = []
+        for d, data in district_stats.items():
+            data["rank_by_mode"] = {m: rank_by_mode[m][d] for m in ["all", "yellow", "orange", "red"]}
+            # Top-level attributes for backwards compatibility
+            data["exposure_index"] = data["exposure_by_mode"]["all"]
+            data["safety_score"] = data["safety_by_mode"]["all"]
+            data["status"] = data["status_by_mode"]["all"]
+            data["badge_color"] = data["badge_by_mode"]["all"]
+            data["threat_rank"] = data["rank_by_mode"]["all"]
             results.append(data)
 
-        # Sort districts by exposure descending (most exposed first)
+        # Default sort by overall exposure descending
         results = sorted(results, key=lambda x: x["exposure_index"], reverse=True)
-        for rank, item in enumerate(results, start=1):
-            item["threat_rank"] = rank
-
         return results
 
 

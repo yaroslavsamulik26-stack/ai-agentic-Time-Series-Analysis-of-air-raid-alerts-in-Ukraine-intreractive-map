@@ -122,13 +122,15 @@ class KyivDataIngestionPipeline:
     def classify_threat(self, text: str) -> tuple[str, str]:
         """Classify weapon threat type and alert level from text."""
         raw_text_lower = text.lower()
-        if any(w in raw_text_lower for w in ["реактивн"]):
+        if any(w in raw_text_lower for w in ["реактивн", "shahed-238", "шахед-238", "шахед 238", "238"]):
             return "drone_jet", "orange"
-        elif any(w in raw_text_lower for w in ["гербер", "гербар", "бандерол", "дань-т"]):
+        elif any(w in raw_text_lower for w in ["гербер", "гербар", "парус", "приман", "фальш-ціл", "фальш ціл", "без бойов", "без б/ч", "імітатор", "бандерол", "дань-т"]):
             return "drone_decoy", "yellow"
-        elif any(w in raw_text_lower for w in ["балістик", "іскандер", "циркон", "с-400", "kn-23", "кинджал"]):
+        elif any(w in raw_text_lower for w in ["балістик", "іскандер-м", "іскандер м", "циркон", "zircon", "с-400", "s-400", "kn-23", "кинджал", "кинжал", "балістич"]):
             return "missile_ballistic", "red"
-        elif any(w in raw_text_lower for w in ["х-101", "х-59", "х-69", "онікс", "калібр", "крилат"]):
+        elif any(w in raw_text_lower for w in ["х-101", "х-59", "х-69", "калібр", "крилат", "іскандер-к", "іскандер к", "х-22", "х-32", "онікс"]):
+            return "missile_cruise", "red"
+        elif any(w in raw_text_lower for w in ["ракета", "ракети", "ракетою", "ракетн"]):
             return "missile_cruise", "red"
         else:
             return "drone_shahed", "yellow"
@@ -190,15 +192,26 @@ class KyivDataIngestionPipeline:
                 continue
 
             # Skip messages purely about other distant regions when Kyiv/capital is not mentioned
-            other_regions = ["одес", "дніпр", "харків", "запоріж", "краматорськ", "прилук", "суми", "полтав", "кривий ріг", "львів"]
-            if any(r in raw_text_lower for r in other_regions) and not any(k in raw_text_lower for k in ["київ", "столиц"]):
+            # Ensure "дніпро" city does not match "дніпровськ" (Kyiv district)!
+            other_regions = ["одес", "харків", "запоріж", "краматорськ", "прилук", "суми", "полтав", "кривий ріг", "львів", "херсон", "миколаїв"]
+            is_other_city = any(r in raw_text_lower for r in other_regions)
+            if re.search(r"\bдніпр(?:о|а|у|ом|і)\b", raw_text_lower) and "дніпровськ" not in raw_text_lower:
+                is_other_city = True
+
+            has_kyiv_context = any(k in raw_text_lower for k in [
+                "київ", "столиц", "оболон", "дарниц", "святошин", "солом'ян",
+                "шевченк", "поділ", "голосіїв", "печерськ", "деснян", "дніпров",
+                "троєщин", "буча", "бровар", "бориспіль", "вишгород", "фастів", "обухів"
+            ])
+            if is_other_city and not has_kyiv_context:
                 continue
 
             # Must mention Kyiv or its districts or key suburbs
             kyiv_keywords = [
                 "київ", "столиц", "оболон", "дарниц", "святошин", "солом'ян",
-                "шевченк", "троєщин", "поділ", "голосіїв", "печерськ",
-                "буча", "бровар", "бориспіль", "вишгород"
+                "шевченк", "поділ", "голосіїв", "печерськ", "деснян", "дніпров",
+                "троєщин", "буча", "ірпін", "гостомел", "макарів", "бровар",
+                "бориспіль", "вишгород", "фастів", "обухів", "васильків"
             ]
             if not any(k in raw_text_lower for k in kyiv_keywords):
                 continue

@@ -637,6 +637,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
             100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
         }
+        @keyframes pulse-orange {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(249, 115, 22, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(249, 115, 22, 0); }
+        }
         @keyframes pulse-yellow {
             0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.7); }
             70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(234, 179, 8, 0); }
@@ -646,9 +651,20 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             animation: pulse-red 2s infinite;
             border-radius: 50%;
         }
+        .pulse-marker-orange {
+            animation: pulse-orange 2s infinite;
+            border-radius: 50%;
+        }
         .pulse-marker-yellow {
             animation: pulse-yellow 2s infinite;
             border-radius: 50%;
+        }
+        @keyframes corridorFlow {
+            from { stroke-dashoffset: 32; }
+            to { stroke-dashoffset: 0; }
+        }
+        .corridor-flow {
+            animation: corridorFlow 2.5s linear infinite;
         }
     </style>
 </head>
@@ -852,20 +868,20 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
             <div class="metrics-grid">
                 <div class="metric-card">
-                    <div class="metric-val" style="color:#38bdf8;" id="modal-nblm-total">770</div>
+                    <div class="metric-val" style="color:#38bdf8;" id="modal-nblm-total">815</div>
                     <div class="metric-label">Верифікованих подій</div>
                 </div>
                 <div class="metric-card">
-                    <div class="metric-val" style="color:#f97316;">15</div>
+                    <div class="metric-val" style="color:#f97316;" id="modal-nblm-jet">15</div>
                     <div class="metric-label">Атак реактивних БпЛА</div>
                 </div>
                 <div class="metric-card">
-                    <div class="metric-val" style="color:#ef4444;">28</div>
+                    <div class="metric-val" style="color:#ef4444;" id="modal-nblm-missiles">79</div>
                     <div class="metric-label">Балістичних / крилатих ударів</div>
                 </div>
                 <div class="metric-card">
-                    <div class="metric-val" style="color:#10b981;">12+</div>
-                    <div class="metric-label">Розгорнутих турелей ППО</div>
+                    <div class="metric-val" style="color:#10b981;" id="modal-nblm-turrets">3 сектори</div>
+                    <div class="metric-label">Розгорнутих рубежів ППО</div>
                 </div>
             </div>
 
@@ -884,7 +900,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                         <i class="fa-solid fa-shield-halved"></i> 2. Розгортання автоматизованих турельних рубежів ППО
                     </h3>
                     <p style="font-size:12px; line-height:1.5; color:#cbd5e1;">
-                        Для парирування швидкісних реактивних цілей на річкових коридорах (русло Дніпра, Оболонь — Вишгород) та західних підходах (Святошин — Житомирська траса) столицю насичено автоматичними зенітними турелями та мобільними вогневими групами із тепловізійним автосупроводом.
+                        Для парирування швидкісних реактивних цілей на річкових коридорах (русло Дніпра, Оболонь — Вишгород) та західних підходах (Святошин — Житомирська траса) столицю насичено автоматичними зенітними турелями та мобільними вогневими групами із тепловізійним автосупроводом (-35% до локального ризику).
                     </p>
                 </div>
 
@@ -898,12 +914,18 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 </div>
 
                 <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:8px; padding:12px;">
-                    <h3 style="font-size:13px; font-weight:700; color:#38bdf8; margin-bottom:6px;">
-                        <i class="fa-solid fa-database"></i> 4. Локальне джерело даних та інтеграція
-                    </h3>
-                    <p style="font-size:12px; line-height:1.5; color:#cbd5e1;">
-                        Дані структуровано з 99 420 повідомлень 6 моніторингових Telegram-каналів. Підготовлено повний експорт для аналітичної моделі: <code style="color:#38bdf8;">data/raw/osint/kyiv_defense_intel_for_notebooklm.md</code>.
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:6px;">
+                        <h3 style="font-size:13px; font-weight:700; color:#38bdf8; display:flex; align-items:center; gap:6px;">
+                            <i class="fa-solid fa-database"></i> 4. Згенероване джерело даних для NotebookLM
+                        </h3>
+                        <button id="copyDigestBtn" onclick="copyNotebookLMDigest()" style="background:#0284c7; color:#fff; border:none; border-radius:5px; padding:4px 10px; font-size:11px; font-weight:600; cursor:pointer;">
+                            <i class="fa-solid fa-copy"></i> Копіювати дайджест
+                        </button>
+                    </div>
+                    <p style="font-size:11px; line-height:1.4; color:#94a3b8; margin-bottom:8px;">
+                        🔐 <i>Google Auth Notice:</i> Оскільки спільне посилання на артефакт NotebookLM вимагає Google OAuth-авторизації, локальний конвеєр агрегував усі інциденти у файл <code style="color:#38bdf8;">data/raw/osint/kyiv_defense_intel_for_notebooklm.md</code>.
                     </p>
+                    <pre id="digestPreview" style="background:#090d16; border:1px solid #1e293b; border-radius:6px; padding:8px 10px; font-size:10px; color:#cbd5e1; max-height:160px; overflow-y:auto; white-space:pre-wrap; word-break:break-word; font-family:monospace;"></pre>
                 </div>
             </div>
         </div>
@@ -978,6 +1000,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         const TS_EVAL = {{ ts_eval_json }};
         const INCIDENTS_DATA = {{ incidents_json }};
         const DISTRICTS_GEOJSON = {{ districts_geojson_json }};
+        const NOTEBOOKLM_DIGEST = {{ notebooklm_digest_json }};
 
         // State
         let currentThreatMode = 'all'; // 'all', 'yellow', 'orange', 'red'
@@ -1052,30 +1075,40 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         // Inbound Attack Corridors (from 100-day OSINT Intel)
         const THREAT_CORRIDORS = [
             {
+                id: "north_river",
+                modes: ["all", "yellow"],
                 name: "Північний річковий вектор (Вишгород — Оболонь — Дніпро)",
                 coords: [[50.60, 30.48], [50.53, 30.50], [50.49, 30.53], [50.46, 30.54]],
                 color: "#38bdf8",
                 desc: "Нічний низьковисотний коридор прориву вздовж русла Дніпра для обходу РЛС."
             },
             {
+                id: "west_zhytomyr",
+                modes: ["all", "orange", "red"],
                 name: "Західний сектор (Макарів — Житомирська траса — Святошин)",
                 coords: [[50.47, 30.05], [50.45, 30.22], [50.45, 30.37], [50.45, 30.40]],
                 color: "#f97316",
                 desc: "Вектор підльоту реактивних Shahed-238 та балістики на авіаційні кластери."
             },
             {
+                id: "south_obukhiv",
+                modes: ["all", "orange", "red"],
                 name: "Південний вектор (Обухів — Козин — Корчувате — Голосіїв)",
                 coords: [[50.15, 30.65], [50.28, 30.58], [50.35, 30.56], [50.39, 30.54]],
                 color: "#a855f7",
-                desc: "Коридор підльоту з півдня до логістичних вузлів та Південного мосту."
+                desc: "Коридор підльоту з півдня до логістичних вузлів та мостів (швидкісні дрони / КР)."
             },
             {
+                id: "se_boryspil",
+                modes: ["all", "red"],
                 name: "Південно-східний вектор (Бориспіль — Бортничі — Дарниця)",
                 coords: [[50.35, 30.95], [50.37, 30.75], [50.40, 30.65], [50.42, 30.60]],
                 color: "#ef4444",
                 desc: "Східний ешелон підльоту через Бориспіль до ТЕЦ-4 та залізничних вузлів Лівого берега."
             },
             {
+                id: "ne_brovary",
+                modes: ["all", "yellow"],
                 name: "Північно-східний вектор (Чернігівський напрямок — Бровари — Деснянський)",
                 coords: [[50.58, 30.90], [50.53, 30.78], [50.50, 30.65], [50.50, 30.58]],
                 color: "#eab308",
@@ -1090,13 +1123,18 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             if (!corridorsVisible) return;
 
             THREAT_CORRIDORS.forEach(c => {
+                const isRelevant = c.modes.includes(currentThreatMode);
+                const opacity = isRelevant ? 0.95 : 0.25;
+                const weight = isRelevant ? 4 : 2;
+
                 const polyline = L.polyline(c.coords, {
                     color: c.color,
-                    weight: 3.5,
-                    opacity: 0.85,
-                    dashArray: '8, 8'
+                    weight: weight,
+                    opacity: opacity,
+                    dashArray: isRelevant ? '8, 8' : '4, 8',
+                    className: isRelevant ? 'corridor-flow' : ''
                 });
-                polyline.bindTooltip(`<b>${c.name}</b><br>${c.desc}`, {
+                polyline.bindTooltip(`<b>${c.name}</b><br>${c.desc}<br><small style="color:${c.color};">Релевантні загрози: ${c.modes.join(', ')}</small>`, {
                     className: 'corridor-tooltip',
                     sticky: true
                 });
@@ -1104,11 +1142,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
                 const endPoint = c.coords[c.coords.length - 1];
                 const arrowMarker = L.circleMarker(endPoint, {
-                    radius: 5,
+                    radius: isRelevant ? 6 : 4,
                     fillColor: c.color,
                     color: '#fff',
-                    weight: 1.5,
-                    fillOpacity: 1
+                    weight: isRelevant ? 2 : 1,
+                    fillOpacity: opacity
                 });
                 corridorsLayerGroup.addLayer(arrowMarker);
             });
@@ -1139,7 +1177,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             }
         }
 
-        // 1. Render All 10 Kyiv Districts Polygons (Left Bank + Right Bank)
+        // 1. Render All 10 Kyiv Districts Polygons (Dynamically reacting to active threat mode)
         function renderDistrictsPolygons() {
             districtsLayerGroup.clearLayers();
 
@@ -1148,15 +1186,19 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 districtStatsMap[d.district] = d;
             });
 
+            const modeKey = (currentThreatMode === 'all') ? 'all' : currentThreatMode;
+
             L.geoJSON(DISTRICTS_GEOJSON, {
                 style: function(feature) {
                     const dName = feature.properties.district;
                     const stats = districtStatsMap[dName] || {};
-                    const exposure = stats.exposure_index || 50;
+                    const exposure = (stats.exposure_by_mode && stats.exposure_by_mode[modeKey] !== undefined)
+                        ? stats.exposure_by_mode[modeKey]
+                        : (stats.exposure_index || 50);
                     const col = getScoreColor(exposure);
                     return {
                         fillColor: col,
-                        fillOpacity: 0.18,
+                        fillOpacity: 0.22,
                         weight: 2,
                         color: col,
                         dashArray: '4, 4'
@@ -1165,15 +1207,26 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 onEachFeature: function(feature, layer) {
                     const dName = feature.properties.district;
                     const stats = districtStatsMap[dName] || {};
-                    const exposure = stats.exposure_index || 50;
-                    const safety = stats.safety_score || 50;
-                    const rank = stats.threat_rank || '-';
-                    const incidents = stats.incidents_count || 0;
+                    const exposure = (stats.exposure_by_mode && stats.exposure_by_mode[modeKey] !== undefined)
+                        ? stats.exposure_by_mode[modeKey]
+                        : (stats.exposure_index || 50);
+                    const safety = (stats.safety_by_mode && stats.safety_by_mode[modeKey] !== undefined)
+                        ? stats.safety_by_mode[modeKey]
+                        : (stats.safety_score || 50);
+                    const rank = (stats.rank_by_mode && stats.rank_by_mode[modeKey] !== undefined)
+                        ? stats.rank_by_mode[modeKey]
+                        : (stats.threat_rank || '-');
+                    const status = (stats.status_by_mode && stats.status_by_mode[modeKey] !== undefined)
+                        ? stats.status_by_mode[modeKey]
+                        : (stats.status || '');
+                    const incidents = (stats.incidents_by_mode && stats.incidents_by_mode[modeKey] !== undefined)
+                        ? stats.incidents_by_mode[modeKey]
+                        : (stats.incidents_count || 0);
                     const col = getScoreColor(exposure);
 
                     layer.on('mouseover', function(e) {
                         layer.setStyle({
-                            fillOpacity: 0.38,
+                            fillOpacity: 0.42,
                             weight: 3,
                             dashArray: ''
                         });
@@ -1181,22 +1234,27 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
                     layer.on('mouseout', function(e) {
                         layer.setStyle({
-                            fillOpacity: 0.18,
+                            fillOpacity: 0.22,
                             weight: 2,
                             dashArray: '4, 4'
                         });
                     });
 
+                    const modeLabel = (currentThreatMode === 'yellow') ? 'Шахеди (БпЛА)' :
+                                      (currentThreatMode === 'orange') ? 'Реактивні БпЛА (Shahed-238)' :
+                                      (currentThreatMode === 'red') ? 'Ракети (Балістика / КР)' : 'Всі види загроз';
+
                     const popup = `
                         <div class="popup-title">${dName} район</div>
-                        <div class="popup-cat">Ранг загрози: #${rank} • ${stats.status || ''}</div>
+                        <div class="popup-cat">Режим: <b>${modeLabel}</b> • Ранг загрози: #${rank}</div>
                         <div class="popup-score-box">
-                            <span style="font-size:11px; color:#cbd5e1;">Індекс загрози:</span>
+                            <span style="font-size:11px; color:#cbd5e1;">Індекс небезпеки:</span>
                             <span class="popup-score-num" style="color:${col};">${exposure}/100</span>
                         </div>
                         <div style="font-size:11px; margin-bottom:4px;">
+                            Статус: <b style="color:${col};">${status}</b><br>
                             Запас безпеки: <b>${safety}%</b><br>
-                            Інцидентів за 3 міс: <b>${incidents}</b>
+                            Ударів/уламків у режимі: <b>${incidents}</b>
                         </div>
                         <div class="popup-desc">${feature.properties.description || ''}</div>
                     `;
@@ -1239,6 +1297,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
                 const pulseClass = isDefense ? '' : (
                     (currentThreatMode === 'red' && score >= 75) ? 'pulse-marker-red' :
+                    (currentThreatMode === 'orange' && score >= 75) ? 'pulse-marker-orange' :
                     (currentThreatMode === 'yellow' && score >= 75 ? 'pulse-marker-yellow' : '')
                 );
 
@@ -1338,10 +1397,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 btn.classList.toggle('active', btn.dataset.mode === mode);
             });
             renderDistrictsPolygons();
+            renderDistrictsList();
             renderObjects();
             renderIncidents();
             renderObjectsList();
             renderIncidentsList();
+            renderCorridors();
         }
 
         // Category Filter
@@ -1380,17 +1441,32 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         function renderDistrictsList() {
             const container = document.getElementById('districts-list');
             container.innerHTML = '';
-            RISK_DATA.districts.forEach(d => {
+            const modeKey = (currentThreatMode === 'all') ? 'all' : currentThreatMode;
+
+            // Sort districts by active mode exposure descending
+            const sortedDistricts = [...RISK_DATA.districts].sort((a, b) => {
+                const expA = (a.exposure_by_mode && a.exposure_by_mode[modeKey] !== undefined) ? a.exposure_by_mode[modeKey] : a.exposure_index;
+                const expB = (b.exposure_by_mode && b.exposure_by_mode[modeKey] !== undefined) ? b.exposure_by_mode[modeKey] : b.exposure_index;
+                return expB - expA;
+            });
+
+            sortedDistricts.forEach((d, idx) => {
+                const exposure = (d.exposure_by_mode && d.exposure_by_mode[modeKey] !== undefined) ? d.exposure_by_mode[modeKey] : d.exposure_index;
+                const rank = (d.rank_by_mode && d.rank_by_mode[modeKey] !== undefined) ? d.rank_by_mode[modeKey] : (idx + 1);
+                const status = (d.status_by_mode && d.status_by_mode[modeKey] !== undefined) ? d.status_by_mode[modeKey] : d.status;
+                const badgeColor = (d.badge_by_mode && d.badge_by_mode[modeKey] !== undefined) ? d.badge_by_mode[modeKey] : d.badge_color;
+                const incCount = (d.incidents_by_mode && d.incidents_by_mode[modeKey] !== undefined) ? d.incidents_by_mode[modeKey] : d.incidents_count;
+
                 const card = document.createElement('div');
                 card.className = 'stat-card';
                 card.onclick = () => map.flyTo([d.center_lat, d.center_lon], 13);
                 card.innerHTML = `
                     <div class="district-info">
-                        <h4>#${d.threat_rank} ${d.district}</h4>
-                        <p>${d.status} • Інцидентів: ${d.incidents_count}</p>
+                        <h4>#${rank} ${d.district}</h4>
+                        <p>${status} • Інцидентів: ${incCount}</p>
                     </div>
-                    <div class="score-pill" style="background:${d.badge_color}33; color:${d.badge_color}; border:1px solid ${d.badge_color};">
-                        ${d.exposure_index} ризик
+                    <div class="score-pill" style="background:${badgeColor}33; color:${badgeColor}; border:1px solid ${badgeColor};">
+                        ${exposure} ризик
                     </div>
                 `;
                 container.appendChild(card);
@@ -1473,8 +1549,51 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             }
         }
 
+        function updateModalMetrics() {
+            const summary = RISK_DATA.incidents_summary || {};
+            const byThreat = summary.by_threat || {};
+            const total = summary.total || INCIDENTS_DATA.length;
+            const jet = byThreat.drone_jet || 0;
+            const missiles = (byThreat.missile_ballistic || 0) + (byThreat.missile_cruise || 0);
+            const turrets = RISK_DATA.objects.filter(o => o.category === 'defense').length;
+
+            const elTotal = document.getElementById('modal-nblm-total');
+            if (elTotal) elTotal.innerText = total;
+            const elJet = document.getElementById('modal-nblm-jet');
+            if (elJet) elJet.innerText = jet;
+            const elMissiles = document.getElementById('modal-nblm-missiles');
+            if (elMissiles) elMissiles.innerText = missiles;
+            const elTurrets = document.getElementById('modal-nblm-turrets');
+            if (elTurrets) elTurrets.innerText = turrets + ' сектори';
+
+            const previewEl = document.getElementById('digestPreview');
+            if (previewEl && NOTEBOOKLM_DIGEST) {
+                previewEl.innerText = NOTEBOOKLM_DIGEST;
+            }
+        }
+
+        function copyNotebookLMDigest() {
+            if (navigator.clipboard && NOTEBOOKLM_DIGEST) {
+                navigator.clipboard.writeText(NOTEBOOKLM_DIGEST).then(() => {
+                    const btn = document.getElementById('copyDigestBtn');
+                    if (btn) {
+                        const orig = btn.innerHTML;
+                        btn.innerHTML = '<i class="fa-solid fa-check"></i> Скопійовано!';
+                        btn.style.background = '#10b981';
+                        setTimeout(() => {
+                            btn.innerHTML = orig;
+                            btn.style.background = '#0284c7';
+                        }, 2000);
+                    }
+                }).catch(() => {
+                    alert('Дайджест готовий у data/raw/osint/kyiv_defense_intel_for_notebooklm.md');
+                });
+            }
+        }
+
         // NotebookLM OSINT Modal
         function openNotebookLMModal() {
+            updateModalMetrics();
             document.getElementById('notebooklmModal').classList.add('open');
         }
 
@@ -1586,7 +1705,20 @@ def build_dashboard():
     with open(districts_geojson_path, "r", encoding="utf-8") as f:
         districts_geojson = json.load(f)
 
-    # 5. Render Jinja template
+    # 5. Load NotebookLM digest text
+    nblm_path = (
+        Path(__file__).resolve().parent.parent
+        / "data"
+        / "raw"
+        / "osint"
+        / "kyiv_defense_intel_for_notebooklm.md"
+    )
+    nblm_text = ""
+    if nblm_path.exists():
+        with open(nblm_path, "r", encoding="utf-8") as f:
+            nblm_text = f.read()
+
+    # 6. Render Jinja template
     template = Template(HTML_TEMPLATE)
     html_content = template.render(
         risk_data_json=json.dumps(risk_data, ensure_ascii=False),
@@ -1594,6 +1726,7 @@ def build_dashboard():
         ts_eval_json=json.dumps(ts_eval, ensure_ascii=False),
         incidents_json=json.dumps(incidents_list, ensure_ascii=False),
         districts_geojson_json=json.dumps(districts_geojson, ensure_ascii=False),
+        notebooklm_digest_json=json.dumps(nblm_text, ensure_ascii=False),
     )
 
     out_file = Path(__file__).resolve().parent.parent / "index.html"
