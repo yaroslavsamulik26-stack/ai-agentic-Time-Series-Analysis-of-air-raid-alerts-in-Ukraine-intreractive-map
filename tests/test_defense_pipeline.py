@@ -156,24 +156,101 @@ class TestKyivDefensePipeline(unittest.TestCase):
 
     # --- 2. Risk Engine & Infrastructure Tests ---
     def test_infrastructure_curated_data(self):
-        """Test infrastructure catalog completeness, 44 objects, defense category presence."""
+        """Test infrastructure catalog completeness (>= 60 objects), all categories presence."""
         self.assertTrue(self.infra_path.exists(), "kyiv_infrastructure.geojson missing")
         with open(self.infra_path, "r", encoding="utf-8") as f:
             data = json.load(f)
 
         features = data.get("features", [])
-        self.assertEqual(len(features), 44, "Expected exactly 44 infrastructure and defense objects")
+        self.assertGreaterEqual(len(features), 60, "Expected at least 60 verified infrastructure objects")
 
         categories = set(f["properties"]["category"] for f in features)
-        self.assertIn("defense", categories)
-        self.assertIn("energy", categories)
-        self.assertIn("transport", categories)
-        self.assertIn("admin", categories)
-        self.assertIn("industry", categories)
+        expected_categories = {
+            "defense", "energy", "transport", "admin", "industry",
+            "bridges", "metro", "fuel", "water", "civilian_hub"
+        }
+        for cat in expected_categories:
+            self.assertIn(cat, categories, f"Category {cat} missing from features")
 
         # Ensure defense objects exist and have proper coverage
         defense_objects = [f for f in features if f["properties"]["category"] == "defense"]
         self.assertGreaterEqual(len(defense_objects), 3, "Expected at least 3 air defense sectors/turret lines")
+
+    def test_bridges_infrastructure(self):
+        """Verify strategic bridges across Dnipro: count, C=85.0 priority, and inter-bank connectivity."""
+        engine = KyivRiskEngine()
+        results = engine.calculate_risk_scores()
+        objects = {o["id"]: o for o in results["objects"]}
+
+        expected_bridge_ids = [
+            "bridge_north", "bridge_south", "bridge_metro", "bridge_paton",
+            "bridge_darnytskyi", "bridge_podilskyi", "bridge_rusanivskyi",
+            "bridge_havanskyi", "overpass_shuliavskyi"
+        ]
+        for b_id in expected_bridge_ids:
+            self.assertIn(b_id, objects, f"Bridge {b_id} missing from catalog")
+            bridge = objects[b_id]
+            self.assertEqual(bridge["category"], "bridges")
+            self.assertTrue(bool(bridge.get("connects")), f"Bridge {b_id} missing connects property")
+            # Verify high cruise missile priority C = 85.0
+            self.assertEqual(bridge["scores"]["red"]["category_weight"], 85.0)
+            self.assertGreaterEqual(bridge["scores"]["red"]["criticality"], 80.0)
+
+    def test_metro_infrastructure(self):
+        """Verify Kyiv Metro critical nodes: depots TCh-1, TCh-2, TCh-3, substations, and open viaduct."""
+        engine = KyivRiskEngine()
+        results = engine.calculate_risk_scores()
+        objects = {o["id"]: o for o in results["objects"]}
+
+        expected_metro_ids = [
+            "metro_depot_darnytsia", "metro_depot_obolon", "metro_depot_kharkivske",
+            "metro_tpp_khreshchatyk", "metro_tpp_pochayna", "metro_tpp_livoberezhna",
+            "metro_tpp_lybidska", "metro_tpp_lukianivska", "metro_open_viaduct_dnipro"
+        ]
+        for m_id in expected_metro_ids:
+            self.assertIn(m_id, objects, f"Metro object {m_id} missing from catalog")
+            metro_obj = objects[m_id]
+            self.assertEqual(metro_obj["category"], "metro")
+            self.assertIn("metro_line", metro_obj)
+            self.assertIn("metro_role", metro_obj)
+            self.assertGreaterEqual(metro_obj["scores"]["all"]["p_target"], 10.0)
+
+        viaduct = objects["metro_open_viaduct_dnipro"]
+        self.assertGreater(viaduct["scores"]["all"].get("debris_risk", 0), 0.0)
+        self.assertTrue(bool(viaduct.get("debris_risk_note")))
+
+    def test_fuel_water_civilian_infrastructure(self):
+        """Verify fuel depots, water utility (Bortnytska R_i=95.0), and civilian mega-hubs (>100k sqm, debris risk)."""
+        engine = KyivRiskEngine()
+        results = engine.calculate_risk_scores()
+        objects = {o["id"]: o for o in results["objects"]}
+
+        # Fuel depots
+        fuel_ids = ["fuel_depot_sviatoshyn", "fuel_terminal_darnytsia", "fuel_depot_korchuvate"]
+        for f_id in fuel_ids:
+            self.assertIn(f_id, objects)
+            self.assertEqual(objects[f_id]["category"], "fuel")
+
+        # Water utility
+        water_ids = ["water_desnianska_station", "water_dniprovska_station", "water_bortnytska_aeration"]
+        for w_id in water_ids:
+            self.assertIn(w_id, objects)
+            self.assertEqual(objects[w_id]["category"], "water")
+
+        bortnytska = objects["water_bortnytska_aeration"]
+        self.assertGreaterEqual(bortnytska["scores"]["red"]["criticality"], 95.0)
+
+        # Civilian mega-hubs (> 100 000 m²)
+        mall_ids = [
+            "hub_mall_retroville", "hub_mall_respublika", "hub_mall_blockbuster",
+            "hub_mall_lavina", "hub_mall_ocean_plaza", "hub_mall_river_mall"
+        ]
+        for m_id in mall_ids:
+            self.assertIn(m_id, objects)
+            mall = objects[m_id]
+            self.assertEqual(mall["category"], "civilian_hub")
+            self.assertGreaterEqual(mall.get("area_sqm", 0), 100_000)
+            self.assertGreater(mall["scores"]["all"].get("debris_risk", 0), 0.0)
 
     def test_risk_engine_calculations(self):
         """Test risk engine output: district rankings, scores, and mitigation."""
@@ -183,7 +260,7 @@ class TestKyivDefensePipeline(unittest.TestCase):
         self.assertIn("districts", results)
         self.assertIn("objects", results)
         self.assertEqual(len(results["districts"]), 10, "Expected 10 Kyiv districts")
-        self.assertEqual(len(results["objects"]), 44, "Expected 44 evaluated objects")
+        self.assertGreaterEqual(len(results["objects"]), 60, "Expected at least 60 evaluated objects")
 
         for d in results["districts"]:
             self.assertGreaterEqual(d["exposure_index"], 0.0)
@@ -212,6 +289,8 @@ class TestKyivDefensePipeline(unittest.TestCase):
                 self.assertIn("category_weight", scores[mode])
                 self.assertIn("corridor_proximity", scores[mode])
                 self.assertIn("air_defense", scores[mode])
+                self.assertIn("vulnerability", scores[mode])
+                self.assertGreaterEqual(scores[mode]["vulnerability"], 10.0)
 
                 # Verify exact precalculated horizons
                 self.assertIn("horizons", scores[mode])
@@ -293,6 +372,21 @@ class TestKyivDefensePipeline(unittest.TestCase):
         self.assertIn("КМВА", content)
         self.assertIn("ДСНС", content)
         self.assertIn("Russia Will Pay", content)
+
+        # Acceptance Criteria: Top panel category filter chips presence
+        self.assertIn("topCategoryFilters", content)
+        self.assertIn('data-cat="bridges"', content)
+        self.assertIn('data-cat="metro"', content)
+        self.assertIn('data-cat="fuel"', content)
+        self.assertIn('data-cat="water"', content)
+        self.assertIn('data-cat="civilian_hub"', content)
+        self.assertIn('data-cat="transport"', content)
+
+        # Responsive styling for mobile viewports (<768px, <480px, <360px)
+        self.assertIn("@media (max-width: 768px)", content)
+        self.assertIn("@media (max-width: 480px)", content)
+        self.assertIn("@media (max-width: 360px)", content)
+        self.assertIn("getDistrictStatusInfo", content)
 
         # Ensure obsolete Dark Map tile is completely absent
         self.assertNotIn("cartocdn", content.lower(), "CartoDB / Dark map tiles should be eliminated")

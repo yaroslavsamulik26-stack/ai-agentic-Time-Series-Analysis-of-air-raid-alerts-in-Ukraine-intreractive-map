@@ -291,6 +291,11 @@ class KyivRiskEngine:
         # 1. Category Strategic Weight [0, 100] based on empirical 6-month strike targeting analysis
         category_weights = {
             "energy": {"yellow": 96.0, "orange": 96.0, "red": 92.0, "all": 94.5},
+            "bridges": {"yellow": 55.0, "orange": 55.0, "red": 85.0, "all": 75.0},
+            "metro": {"yellow": 70.0, "orange": 70.0, "red": 80.0, "all": 75.0},
+            "fuel": {"yellow": 92.0, "orange": 92.0, "red": 88.0, "all": 90.0},
+            "water": {"yellow": 80.0, "orange": 80.0, "red": 85.0, "all": 82.0},
+            "civilian_hub": {"yellow": 65.0, "orange": 65.0, "red": 60.0, "all": 62.0},
             "industry": {"yellow": 72.0, "orange": 72.0, "red": 96.0, "all": 84.0},
             "admin": {"yellow": 48.0, "orange": 48.0, "red": 95.0, "all": 75.0},
             "transport": {"yellow": 68.0, "orange": 68.0, "red": 82.0, "all": 75.0},
@@ -299,14 +304,30 @@ class KyivRiskEngine:
         cw = category_weights.get(cat, {"yellow": 50.0, "orange": 50.0, "red": 50.0, "all": 50.0}).get(mode, 60.0)
 
         # 2. Facility Criticality [0, 100]
-        v_yellow = float(props.get("vuln_yellow", 20))
-        v_red = float(props.get("vuln_red", 20))
+        try:
+            v_yellow = float(props.get("vuln_yellow", 20) or 20)
+        except (ValueError, TypeError):
+            v_yellow = 20.0
+        try:
+            v_red = float(props.get("vuln_red", 20) or 20)
+        except (ValueError, TypeError):
+            v_red = 20.0
+
         if mode in ["yellow", "orange"]:
             crit = (v_yellow / 40.0) * 100.0
         elif mode == "red":
             crit = (v_red / 40.0) * 100.0
         else:
             crit = (max(v_yellow, v_red) / 40.0) * 100.0
+
+        # Strategic bridges: heightened vulnerability to blocking inter-bank communication under missile strikes (R1)
+        if cat == "bridges" and mode in ["red", "all"]:
+            crit = min(100.0, crit * 1.15)
+
+        # Water utility: Bortnytska aeration station critical environmental rating R_i = 95.0 (R3)
+        if props.get("id") == "water_bortnytska_aeration" or "95.0" in str(props.get("criticality_index", "")):
+            crit = max(crit, 95.0)
+
         crit = min(100.0, max(20.0, crit))
 
         # 3. Corridor Proximity [0, 100]
@@ -334,6 +355,18 @@ class KyivRiskEngine:
         kappa = 1.28
         raw_prob = kappa * h_val * strategic_score * mitigation_factor
         p_target = round(min(100.0, max(5.0, raw_prob)), 1)
+
+        # Debris Risk P_DebrisRisk for Civilian Mega-Hubs & Open Transit Viaducts (R2, R3)
+        try:
+            area = float(props.get("area_sqm") or 0)
+        except (ValueError, TypeError):
+            area = 0.0
+
+        p_debris_risk = 0.0
+        is_viaduct = (props.get("id") == "metro_open_viaduct_dnipro" or "viaduct" in str(props.get("id", "")))
+        if cat == "civilian_hub" or area > 0 or is_viaduct:
+            area_factor = 0.85 if is_viaduct else (min(1.0, max(0.65, area / 300000.0)) if area else 0.75)
+            p_debris_risk = round(min(100.0, corridor_prox * 0.75 * area_factor + 25.0 * (1.0 - air_defense * 0.5)), 1)
 
         # Precompute across tactical (24h), operational (7d), and strategic (30d) horizons
         horizons_p = {}
@@ -365,6 +398,7 @@ class KyivRiskEngine:
             "air_defense_pct": int(round(air_defense * 100)),
             "time_hazard": h_val,
             "mitigation_factor": round(mitigation_factor, 3),
+            "debris_risk": p_debris_risk,
         }
 
     def calculate_risk_scores(self) -> dict:
@@ -401,6 +435,7 @@ class KyivRiskEngine:
             scores_red["proximity"] = prox_red
             scores_red["vulnerability"] = float(props.get("vuln_red", 20))
             scores_all["proximity"] = prox_all
+            scores_all["vulnerability"] = max(scores_yellow["vulnerability"], scores_red["vulnerability"])
 
             obj_data = {
                 "id": props["id"],
@@ -417,6 +452,16 @@ class KyivRiskEngine:
                     "red": scores_red,
                     "all": scores_all,
                 },
+                # Individual facility characteristics
+                "connects": props.get("connects", ""),
+                "metro_line": props.get("metro_line", ""),
+                "metro_role": props.get("metro_role", ""),
+                "fuel_capacity": props.get("fuel_capacity", ""),
+                "water_supply_share": props.get("water_supply_share", ""),
+                "criticality_index": props.get("criticality_index", ""),
+                "gross_area": props.get("gross_area", ""),
+                "area_sqm": props.get("area_sqm", 0),
+                "debris_risk_note": props.get("debris_risk_note", ""),
             }
             enriched_objects.append(obj_data)
 

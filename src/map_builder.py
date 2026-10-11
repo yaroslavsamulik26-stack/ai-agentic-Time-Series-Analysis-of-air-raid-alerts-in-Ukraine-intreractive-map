@@ -401,6 +401,59 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             color: #ffffff;
         }
 
+        .top-cat-filters {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            width: 100%;
+            padding-top: 5px;
+            margin-top: 2px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .top-cat-filters::-webkit-scrollbar {
+            height: 3px;
+        }
+
+        .top-cat-filters::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+
+        .top-cat-filters .filter-chip {
+            padding: 3px 8px;
+            font-size: 10.5px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #cbd5e1;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+            white-space: nowrap;
+        }
+
+        .top-cat-filters .filter-chip:hover {
+            background: rgba(255, 255, 255, 0.12);
+            color: #ffffff;
+            border-color: rgba(255, 255, 255, 0.25);
+        }
+
+        .top-cat-filters .filter-chip.active {
+            background: rgba(59, 130, 246, 0.25);
+            border-color: var(--accent-blue);
+            color: #ffffff;
+            box-shadow: 0 0 8px rgba(59, 130, 246, 0.25);
+        }
+
         /* Leaderboard & Stats Cards */
         .stat-card {
             background: rgba(255, 255, 255, 0.03);
@@ -510,6 +563,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             border: 1px solid rgba(255, 255, 255, 0.2) !important;
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6) !important;
             padding: 2px !important;
+        }
+
+        .leaflet-popup-content {
+            margin: 10px 12px !important;
+            max-width: 320px;
+            max-height: 380px;
+            overflow-y: auto;
         }
 
         .leaflet-popup-tip {
@@ -668,6 +728,133 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .corridor-flow {
             animation: corridorFlow 2.5s linear infinite;
         }
+
+        @media (max-width: 992px) {
+            .top-navbar {
+                max-width: calc(100vw - 20px);
+                right: 10px;
+                gap: 6px;
+                padding: 6px 8px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .top-navbar {
+                position: absolute;
+                top: 8px;
+                left: 8px;
+                right: 8px;
+                max-width: calc(100vw - 16px);
+                gap: 5px;
+                padding: 5px 8px;
+            }
+            .title-text h1 {
+                font-size: 11px;
+            }
+            .title-badge {
+                font-size: 8px;
+                padding: 2px 4px;
+            }
+            .mode-btn, .time-btn, .btn-action-small {
+                font-size: 10px;
+                padding: 3px 6px;
+            }
+            .side-panel {
+                top: auto;
+                bottom: 8px;
+                left: 8px;
+                right: 8px;
+                width: auto;
+                max-height: 48vh;
+            }
+            .leaflet-popup-content {
+                max-width: 260px !important;
+                max-height: 300px !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .threat-modes, .time-range-modes {
+                overflow-x: auto;
+                max-width: 100%;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+            }
+            .threat-modes::-webkit-scrollbar, .time-range-modes::-webkit-scrollbar {
+                display: none;
+            }
+            .mode-btn, .time-btn, .btn-action-small {
+                font-size: 9.5px;
+                padding: 3px 5px;
+                white-space: nowrap;
+            }
+            .top-navbar {
+                gap: 4px;
+                padding: 4px 6px;
+            }
+            .panel-tab {
+                font-size: 10px;
+                padding: 6px 3px;
+                white-space: nowrap;
+            }
+            .panel-tabs {
+                overflow-x: auto;
+                scrollbar-width: none;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .top-navbar {
+                top: 4px;
+                left: 4px;
+                right: 4px;
+                max-width: calc(100vw - 8px);
+                padding: 3px 4px;
+                gap: 3px;
+            }
+            .title-text h1 {
+                font-size: 10px;
+            }
+            .title-badge {
+                font-size: 7.5px;
+                padding: 1px 3px;
+            }
+            .mode-btn, .time-btn, .btn-action-small {
+                font-size: 8.5px;
+                padding: 2px 4px;
+            }
+            .top-cat-filters .filter-chip {
+                padding: 2px 5px;
+                font-size: 9px;
+            }
+            .side-panel {
+                left: 4px;
+                right: 4px;
+                bottom: 4px;
+                max-height: 44vh;
+            }
+            .panel-drag-header {
+                padding: 5px 8px;
+            }
+            .panel-drag-title {
+                font-size: 10px;
+            }
+            .panel-tab {
+                font-size: 8.5px;
+                padding: 5px 2px;
+            }
+            .stat-card {
+                padding: 5px 6px;
+            }
+            .district-info h4 {
+                font-size: 10.5px;
+            }
+            .leaflet-popup-content {
+                max-width: 220px !important;
+                max-height: 250px !important;
+                margin: 6px 8px !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -721,6 +908,40 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         <button class="btn-action-small" onclick="openAnalyticsModal()">
             <i class="fa-solid fa-chart-line"></i> Time Series
         </button>
+
+        <!-- Top Category Filters Row -->
+        <div class="top-cat-filters" id="topCategoryFilters">
+            <div class="filter-chip active" data-cat="bridges" onclick="toggleCategoryFilter('bridges')" title="Фільтр: Мости через Дніпро та розв'язки">
+                <i class="fa-solid fa-bridge" style="color:#38bdf8"></i> Мости
+            </div>
+            <div class="filter-chip active" data-cat="metro" onclick="toggleCategoryFilter('metro')" title="Фільтр: Київський Метрополітен">
+                <i class="fa-solid fa-train-subway" style="color:#22c55e"></i> Метрополітен
+            </div>
+            <div class="filter-chip active" data-cat="energy" onclick="toggleCategoryFilter('energy')" title="Фільтр: Енергетика">
+                <i class="fa-solid fa-bolt" style="color:#eab308"></i> Енергетика
+            </div>
+            <div class="filter-chip active" data-cat="fuel" onclick="toggleCategoryFilter('fuel')" title="Фільтр: Паливо (ПММ)">
+                <i class="fa-solid fa-gas-pump" style="color:#f97316"></i> Паливо (ПММ)
+            </div>
+            <div class="filter-chip active" data-cat="water" onclick="toggleCategoryFilter('water')" title="Фільтр: Водоканал">
+                <i class="fa-solid fa-droplet" style="color:#06b6d4"></i> Водоканал
+            </div>
+            <div class="filter-chip active" data-cat="industry" onclick="toggleCategoryFilter('industry')" title="Фільтр: Підприємства ВПК та оборонпрому">
+                <i class="fa-solid fa-industry" style="color:#f43f5e"></i> ВПК
+            </div>
+            <div class="filter-chip active" data-cat="civilian_hub" onclick="toggleCategoryFilter('civilian_hub')" title="Фільтр: ТРЦ та цивільні мега-хаби">
+                <i class="fa-solid fa-cart-shopping" style="color:#ec4899"></i> ТРЦ / Цивільні хаби
+            </div>
+            <div class="filter-chip active" data-cat="admin" onclick="toggleCategoryFilter('admin')" title="Фільтр: Органи влади та держуправління">
+                <i class="fa-solid fa-landmark" style="color:#a855f7"></i> Влада
+            </div>
+            <div class="filter-chip active" data-cat="transport" onclick="toggleCategoryFilter('transport')" title="Фільтр: Транспортні вокзали та хаби">
+                <i class="fa-solid fa-train" style="color:#94a3b8"></i> Вокзали
+            </div>
+            <div class="filter-chip active" data-cat="defense" onclick="toggleCategoryFilter('defense')" title="Фільтр: Ешелони ППО & Турелі">
+                <i class="fa-solid fa-shield-halved" style="color:#10b981"></i> Ешелони ППО
+            </div>
+        </div>
     </div>
 
     <!-- Reopen Floating Button (when panel is closed) -->
@@ -763,17 +984,32 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 <div class="filter-section">
                     <div class="section-title"><i class="fa-solid fa-filter"></i> Категорії об'єктів</div>
                     <div class="category-filters" style="grid-template-columns: 1fr 1fr; gap: 5px;">
+                        <div class="filter-chip active" data-cat="bridges" onclick="toggleCategoryFilter('bridges')">
+                            <i class="fa-solid fa-bridge" style="color:#38bdf8"></i> Мости
+                        </div>
+                        <div class="filter-chip active" data-cat="metro" onclick="toggleCategoryFilter('metro')">
+                            <i class="fa-solid fa-train-subway" style="color:#22c55e"></i> Метрополітен
+                        </div>
                         <div class="filter-chip active" data-cat="energy" onclick="toggleCategoryFilter('energy')">
                             <i class="fa-solid fa-bolt" style="color:#eab308"></i> Енергетика
                         </div>
-                        <div class="filter-chip active" data-cat="transport" onclick="toggleCategoryFilter('transport')">
-                            <i class="fa-solid fa-bridge" style="color:#38bdf8"></i> Мости / Транспорт
+                        <div class="filter-chip active" data-cat="fuel" onclick="toggleCategoryFilter('fuel')">
+                            <i class="fa-solid fa-gas-pump" style="color:#f97316"></i> Паливо (ПММ)
+                        </div>
+                        <div class="filter-chip active" data-cat="water" onclick="toggleCategoryFilter('water')">
+                            <i class="fa-solid fa-droplet" style="color:#06b6d4"></i> Водоканал
+                        </div>
+                        <div class="filter-chip active" data-cat="industry" onclick="toggleCategoryFilter('industry')">
+                            <i class="fa-solid fa-industry" style="color:#f43f5e"></i> ВПК / Промисловість
+                        </div>
+                        <div class="filter-chip active" data-cat="civilian_hub" onclick="toggleCategoryFilter('civilian_hub')">
+                            <i class="fa-solid fa-cart-shopping" style="color:#ec4899"></i> ТРЦ / Цивільні хаби
                         </div>
                         <div class="filter-chip active" data-cat="admin" onclick="toggleCategoryFilter('admin')">
                             <i class="fa-solid fa-landmark" style="color:#a855f7"></i> Влада / Зв'язок
                         </div>
-                        <div class="filter-chip active" data-cat="industry" onclick="toggleCategoryFilter('industry')">
-                            <i class="fa-solid fa-industry" style="color:#f43f5e"></i> ВПК / Промисловість
+                        <div class="filter-chip active" data-cat="transport" onclick="toggleCategoryFilter('transport')">
+                            <i class="fa-solid fa-train" style="color:#94a3b8"></i> Транспортні вокзали
                         </div>
                         <div class="filter-chip active" data-cat="defense" onclick="toggleCategoryFilter('defense')" style="grid-column: span 2;">
                             <i class="fa-solid fa-shield-halved" style="color:#10b981"></i> Ешелони ППО & Турелі
@@ -1030,13 +1266,40 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         // State
         let currentThreatMode = 'all'; // 'all', 'yellow', 'orange', 'red'
         let currentTimeRange = '7d';   // Default to last 7 days!
-        let activeCategories = new Set(['energy', 'transport', 'admin', 'industry', 'defense']);
+        let activeCategories = new Set([
+            'energy', 'bridges', 'metro', 'transport', 'fuel', 'water',
+            'industry', 'civilian_hub', 'admin', 'defense'
+        ]);
 
         function getScoreTier(score) {
             if (score >= 70) return 'Критичний';
             if (score >= 50) return 'Високий';
             if (score >= 30) return 'Середній';
             return 'Помірний';
+        }
+
+        function getDistrictStatusInfo(expVal) {
+            if (expVal >= 70) {
+                return {
+                    status: "КРИТИЧНИЙ РИЗИК (висока щільність цілей, енергетика/ВПК)",
+                    badge: "#dc2626"
+                };
+            } else if (expVal >= 60) {
+                return {
+                    status: "ВИСОКИЙ РИЗИК (коридори підльоту, ТЕЦ / стратегічні підстанції)",
+                    badge: "#ea580c"
+                };
+            } else if (expVal >= 45) {
+                return {
+                    status: "ПІДВИЩЕНИЙ РИЗИК (вузловий транспорт, резервні потужності)",
+                    badge: "#eab308"
+                };
+            } else {
+                return {
+                    status: "ВІДНОСНО ПОМІРНИЙ РИЗИК (ешелоноване прикриття ППО)",
+                    badge: "#10b981"
+                };
+            }
         }
 
         function setTimeRange(rangeKey) {
@@ -1078,12 +1341,29 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     if (d.base_avg_p && d.base_avg_p[m]) {
                         d.avg_target_prob[m] = Math.round(d.base_avg_p[m] * hMultiplier * 10) / 10;
                     }
+                    const stInfo = getDistrictStatusInfo(adjExp);
+                    if (d.status_by_mode) d.status_by_mode[m] = stInfo.status;
+                    if (d.badge_by_mode) d.badge_by_mode[m] = stInfo.badge;
+
                     if (m === currentThreatMode || (currentThreatMode === 'all' && m === 'all')) {
                         d.exposure_index = adjExp;
                         d.safety_score = d.safety_by_mode[m];
+                        d.status = stInfo.status;
+                        d.badge_color = stInfo.badge;
                     }
                 }
             });
+
+            // Recompute ranking for each threat mode based on adjusted exposure
+            for (const m of ['all', 'yellow', 'orange', 'red']) {
+                const sorted = [...RISK_DATA.districts].sort((a, b) => (b.exposure_by_mode[m] || 0) - (a.exposure_by_mode[m] || 0));
+                sorted.forEach((d, idx) => {
+                    if (d.rank_by_mode) d.rank_by_mode[m] = idx + 1;
+                    if (m === currentThreatMode || (currentThreatMode === 'all' && m === 'all')) {
+                        d.threat_rank = idx + 1;
+                    }
+                });
+            }
 
             renderDistrictsPolygons();
             renderDistrictsList();
@@ -1233,10 +1513,15 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
         function getCategoryIcon(cat) {
             switch(cat) {
+                case 'bridges': return 'fa-bridge';
+                case 'metro': return 'fa-train-subway';
                 case 'energy': return 'fa-bolt';
-                case 'transport': return 'fa-bridge';
-                case 'admin': return 'fa-landmark';
+                case 'fuel': return 'fa-gas-pump';
+                case 'water': return 'fa-droplet';
                 case 'industry': return 'fa-industry';
+                case 'civilian_hub': return 'fa-cart-shopping';
+                case 'transport': return 'fa-train';
+                case 'admin': return 'fa-landmark';
                 case 'defense': return 'fa-shield-halved';
                 default: return 'fa-location-dot';
             }
@@ -1321,7 +1606,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                         <div style="font-size:11px; margin-bottom:4px;">
                             Статус: <b style="color:${col};">${status}</b><br>
                             Запас безпеки: <b>${safety}%</b><br>
-                            Цільових об'єктів: <b>${stats.objects_count || 0}</b> | Сер. P<sub>Target</sub>: <b>${(stats.avg_target_prob && stats.avg_target_prob[modeKey]) ? stats.avg_target_prob[modeKey] + '%' : '—'}</b>
+                            Цільових об'єктів: <b>${stats.objects_count || 0}</b> | Сер. P<sub>Target</sub>: <b>${(stats.avg_target_prob && stats.avg_target_prob[modeKey] !== undefined) ? stats.avg_target_prob[modeKey] + '%' : '—'}</b>
                         </div>
                         <div class="popup-desc">${feature.properties.description || ''}</div>
                     `;
@@ -1364,7 +1649,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 `;
 
                 const pulseClass = isDefense ? '' : (
-                    (currentThreatMode === 'red' && score >= 70) ? 'pulse-marker-red' :
+                    ((currentThreatMode === 'red' || currentThreatMode === 'all') && score >= 70) ? 'pulse-marker-red' :
                     (currentThreatMode === 'yellow' && score >= 70 ? 'pulse-marker-yellow' : '')
                 );
 
@@ -1375,7 +1660,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     iconAnchor: [14, 14]
                 });
 
-                const marker = L.marker([obj.lat, obj.lon], { icon: customIcon });
+                const marker = L.marker([obj.lat, obj.lon], {
+                    icon: customIcon,
+                    title: obj.name,
+                    riseOnHover: true
+                });
+                marker.on('mouseover', function() { this.setZIndexOffset(1000); });
+                marker.on('mouseout', function() { this.setZIndexOffset(0); });
                 obj._marker = marker;
 
                 const scoreLabel = isDefense ? 'Індекс активності ППО:' : 'Ймовірність удару P<sub>Target</sub>:';
@@ -1387,6 +1678,35 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 const critText = scoreObj.criticality !== undefined ? `${scoreObj.criticality} б.` : '—';
                 const proxText = scoreObj.corridor_proximity !== undefined ? `${scoreObj.corridor_proximity} б.` : 'Віддалений';
                 const adText = scoreObj.air_defense_pct !== undefined ? `-${scoreObj.air_defense_pct}% (Щит рубежу)` : 'Базовий';
+
+                let extraDetailsHtml = '';
+                if (obj.connects) {
+                    extraDetailsHtml += `<div><b>Сполучення берегів:</b> ${obj.connects}</div>`;
+                }
+                if (obj.metro_line) {
+                    extraDetailsHtml += `<div><b>Лінія метро:</b> ${obj.metro_line}</div>`;
+                }
+                if (obj.metro_role) {
+                    extraDetailsHtml += `<div><b>Роль у метрополітені:</b> ${obj.metro_role}</div>`;
+                }
+                if (obj.fuel_capacity) {
+                    extraDetailsHtml += `<div><b>Паливний комплекс:</b> ${obj.fuel_capacity}</div>`;
+                }
+                if (obj.water_supply_share) {
+                    extraDetailsHtml += `<div><b>Частка водопостачання:</b> ${obj.water_supply_share}</div>`;
+                }
+                if (obj.criticality_index) {
+                    extraDetailsHtml += `<div><b>Індекс критичності:</b> ${obj.criticality_index}</div>`;
+                }
+                if (obj.gross_area) {
+                    extraDetailsHtml += `<div><b>Площа мега-хабу:</b> ${obj.gross_area}</div>`;
+                }
+                if (scoreObj.debris_risk && scoreObj.debris_risk > 0) {
+                    extraDetailsHtml += `<div><b>Ризик уламків (P_Debris):</b> ${scoreObj.debris_risk}%</div>`;
+                }
+                if (obj.debris_risk_note) {
+                    extraDetailsHtml += `<div><b>Фактор ризику уламків:</b> ${obj.debris_risk_note}</div>`;
+                }
 
                 const popupContent = `
                     <div class="popup-title">${obj.name}</div>
@@ -1405,21 +1725,31 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                         <div><b>Пріоритетність цілі:</b> ${cwText} (Критичність: ${critText})</div>
                         <div><b>Вектор підльоту:</b> ${proxText}</div>
                         <div><b>Захист ППО:</b> ${adText}</div>
+                        ${extraDetailsHtml}
                         <div><b>Опис об'єкта:</b> ${obj.description}</div>
                     </div>
                 `;
 
-                marker.bindPopup(popupContent);
+                marker.bindPopup(popupContent, {
+                    maxWidth: 320,
+                    maxHeight: 380,
+                    autoPanPadding: [20, 20]
+                });
                 objectsLayerGroup.addLayer(marker);
             });
         }
 
         function formatCategoryUA(cat) {
             switch(cat) {
+                case 'bridges': return 'Мости';
+                case 'metro': return 'Метрополітен';
                 case 'energy': return 'Енергетика';
-                case 'transport': return 'Мости / Транспорт';
-                case 'admin': return "Влада / Зв'язок";
+                case 'fuel': return 'Паливо (ПММ)';
+                case 'water': return 'Водоканал';
                 case 'industry': return 'ВПК / Промисловість';
+                case 'civilian_hub': return 'ТРЦ / Цивільні хаби';
+                case 'transport': return 'Транспортні вокзали';
+                case 'admin': return "Влада / Зв'язок";
                 case 'defense': return 'Ешелони ППО & Турелі';
                 default: return 'Інфраструктура';
             }
@@ -1498,6 +1828,16 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             document.querySelectorAll('.mode-btn').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.mode === mode);
             });
+            const modeKey = (mode === 'all') ? 'all' : mode;
+            RISK_DATA.districts.forEach(d => {
+                if (d.exposure_by_mode && d.exposure_by_mode[modeKey] !== undefined) {
+                    d.exposure_index = d.exposure_by_mode[modeKey];
+                    d.safety_score = d.safety_by_mode[modeKey];
+                    if (d.status_by_mode) d.status = d.status_by_mode[modeKey];
+                    if (d.badge_by_mode) d.badge_color = d.badge_by_mode[modeKey];
+                    if (d.rank_by_mode && d.rank_by_mode[modeKey]) d.threat_rank = d.rank_by_mode[modeKey];
+                }
+            });
             renderDistrictsPolygons();
             renderDistrictsList();
             renderObjects();
@@ -1508,13 +1848,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
         // Category Filter
         function toggleCategoryFilter(cat) {
-            const chip = document.querySelector(`.filter-chip[data-cat="${cat}"]`);
+            const chips = document.querySelectorAll(`.filter-chip[data-cat="${cat}"]`);
             if (activeCategories.has(cat)) {
                 activeCategories.delete(cat);
-                chip.classList.remove('active');
+                chips.forEach(c => c.classList.remove('active'));
             } else {
                 activeCategories.add(cat);
-                chip.classList.add('active');
+                chips.forEach(c => c.classList.add('active'));
             }
             renderObjects();
             renderObjectsList();
@@ -1601,7 +1941,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                         <p>${obj.district} • ${formatCategoryUA(obj.category)}</p>
                     </div>
                     <div class="score-pill" style="background:${color}33; color:${color}; border:1px solid ${color};">
-                        ${score}
+                        ${score}%
                     </div>
                 `;
                 container.appendChild(card);
