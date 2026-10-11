@@ -118,6 +118,17 @@ class TestKyivDefensePipeline(unittest.TestCase):
         self.assertIn("yellow", alert_levels)
         self.assertIn("red", alert_levels)
 
+        # Unified Shahed verification: no standalone drone_jet
+        threat_types = set(df["threat_type"].unique())
+        self.assertNotIn("drone_jet", threat_types, "drone_jet must be unified into drone_shahed")
+        self.assertIn("drone_shahed", threat_types)
+
+        # 6-month period check: April 11 to October 11, 2026
+        min_date = df["datetime"].min()
+        max_date = df["datetime"].max()
+        self.assertTrue(min_date.startswith("2026-04-11"), f"Expected start date 2026-04-11, got {min_date}")
+        self.assertTrue(max_date.startswith("2026-10-11"), f"Expected end date 2026-10-11, got {max_date}")
+
         # Verified significant missile presence
         red_count = (df["alert_level"] == "red").sum()
         self.assertGreaterEqual(red_count, 50, f"Expected at least 50 missile/ballistic strikes, got {red_count}")
@@ -193,6 +204,12 @@ class TestKyivDefensePipeline(unittest.TestCase):
         self.assertIn("baseline_roc_auc", metrics)
         self.assertIn("model_brier_score", metrics)
 
+        # 6-month period temporal validation: Train April-August, Test September-October
+        self.assertIn("2026-04-11", eval_metrics["train_period"])
+        self.assertIn("2026-08-31", eval_metrics["train_period"])
+        self.assertIn("2026-09-01", eval_metrics["test_period"])
+        self.assertIn("2026-10-11", eval_metrics["test_period"])
+
         # Probabilistic validation
         self.assertGreaterEqual(metrics["model_roc_auc"], 0.5)
         self.assertLessEqual(metrics["model_roc_auc"], 1.0)
@@ -213,15 +230,39 @@ class TestKyivDefensePipeline(unittest.TestCase):
         self.assertIn("fa-shield-halved", content)
         self.assertIn("Google Maps", content)
         self.assertIn("Google Satellite", content)
-        self.assertIn("Реактивні БпЛА", content)
+        self.assertIn("Ударні БпЛА (Shahed)", content)
+        self.assertIn("Всі загрози", content)
         self.assertIn("Ешелони ППО & Турелі", content)
         self.assertIn("NOTEBOOKLM_DIGEST", content)
         self.assertIn("copyNotebookLMDigest", content)
         self.assertIn("corridor-flow", content)
         self.assertIn("modal-nblm-missiles", content)
+        self.assertIn("modal-nblm-shahed", content)
 
         # Ensure obsolete Dark Map tile is completely absent
         self.assertNotIn("cartocdn", content.lower(), "CartoDB / Dark map tiles should be eliminated")
+
+    def test_ui_terminology_localization(self):
+        """Verify that UI contains 3 threat modes and no technical English identifiers in markup/labels."""
+        content = self.index_path.read_text(encoding="utf-8")
+
+        # Threat mode switcher: 3 clear options
+        self.assertIn("Всі загрози", content)
+        self.assertIn("Ударні БпЛА (Shahed)", content)
+        self.assertIn("Ракети", content)
+
+        # Technical identifiers should not be displayed in UI badges/labels/popups
+        forbidden_ui_patterns = [
+            "<b>drone_shahed</b>",
+            "<b>drone_jet</b>",
+            "<b>missile_ballistic</b>",
+            "<b>missile_cruise</b>",
+            "<b>debris_fall</b>",
+            "<b>direct_hit</b>",
+            "<b>intercepted_airburst</b>",
+        ]
+        for pattern in forbidden_ui_patterns:
+            self.assertNotIn(pattern, content)
 
 
 if __name__ == "__main__":

@@ -964,7 +964,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     <i class="fa-solid fa-shield-virus"></i> Методологія запобігання Data Leakage
                 </h3>
                 <p style="font-size:12px; line-height:1.45; color:#cbd5e1;">
-                    Train split: дані до <b>1 вересня</b>. Test split: <b>1 вересня — 10 жовтня</b>.<br>
+                    Train split: дані до <b>1 вересня</b>. Test split: <b>1 вересня — 11 жовтня</b>.<br>
                     Усі ознаки моделі на момент $T$ обчислюються суворо з подій минулого. Жодного витоку майбутніх подій.
                 </p>
             </div>
@@ -1068,7 +1068,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         let objectsLayerGroup = L.layerGroup().addTo(map);
         let incidentsLayerGroup = L.layerGroup().addTo(map);
 
-        // Inbound Attack Corridors (from 100-day OSINT Intel)
+        // Inbound Attack Corridors (from OSINT Intel)
         const THREAT_CORRIDORS = [
             {
                 id: "north_river",
@@ -1080,23 +1080,23 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             },
             {
                 id: "west_zhytomyr",
-                modes: ["all", "orange", "red"],
+                modes: ["all", "yellow", "red"],
                 name: "Західний сектор (Макарів — Житомирська траса — Святошин)",
                 coords: [[50.47, 30.05], [50.45, 30.22], [50.45, 30.37], [50.45, 30.40]],
                 color: "#f97316",
-                desc: "Вектор підльоту реактивних Shahed-238 та балістики на авіаційні кластери."
+                desc: "Вектор підльоту ударних БпЛА (Shahed) та ракет на промислові й авіаційні кластери."
             },
             {
                 id: "south_obukhiv",
-                modes: ["all", "orange", "red"],
-                name: "Південний вектор (Обухів — Козин — Корчувате — Голосіїв)",
+                modes: ["all", "yellow", "red"],
+                name: "Південний сектор (Обухів — Козин — Корчувате — Голосіїв)",
                 coords: [[50.15, 30.65], [50.28, 30.58], [50.35, 30.56], [50.39, 30.54]],
                 color: "#a855f7",
-                desc: "Коридор підльоту з півдня до логістичних вузлів та мостів (швидкісні дрони / КР)."
+                desc: "Коридор підльоту з півдня до логістичних вузлів та мостів (ударні БпЛА / КР)."
             },
             {
                 id: "se_boryspil",
-                modes: ["all", "red"],
+                modes: ["all", "yellow", "red"],
                 name: "Південно-східний вектор (Бориспіль — Бортничі — Дарниця)",
                 coords: [[50.35, 30.95], [50.37, 30.75], [50.40, 30.65], [50.42, 30.60]],
                 color: "#ef4444",
@@ -1118,6 +1118,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             corridorsLayerGroup.clearLayers();
             if (!corridorsVisible) return;
 
+            const modeNamesUA = {
+                'all': 'Всі загрози',
+                'yellow': 'Ударні БпЛА (Shahed)',
+                'red': 'Ракети'
+            };
+
             THREAT_CORRIDORS.forEach(c => {
                 const isRelevant = c.modes.includes(currentThreatMode);
                 const opacity = isRelevant ? 0.95 : 0.25;
@@ -1130,7 +1136,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     dashArray: isRelevant ? '8, 8' : '4, 8',
                     className: isRelevant ? 'corridor-flow' : ''
                 });
-                polyline.bindTooltip(`<b>${c.name}</b><br>${c.desc}<br><small style="color:${c.color};">Релевантні загрози: ${c.modes.join(', ')}</small>`, {
+                const modesLabel = c.modes.map(m => modeNamesUA[m] || m).join(', ');
+                polyline.bindTooltip(`<b>${c.name}</b><br>${c.desc}<br><small style="color:${c.color};">Релевантні загрози: ${modesLabel}</small>`, {
                     className: 'corridor-tooltip',
                     sticky: true
                 });
@@ -1236,9 +1243,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                         });
                     });
 
-                    const modeLabel = (currentThreatMode === 'yellow') ? 'Шахеди (БпЛА)' :
-                                      (currentThreatMode === 'orange') ? 'Реактивні БпЛА (Shahed-238)' :
-                                      (currentThreatMode === 'red') ? 'Ракети (Балістика / КР)' : 'Всі види загроз';
+                    const modeLabel = (currentThreatMode === 'yellow') ? 'Ударні БпЛА (Shahed)' :
+                                      (currentThreatMode === 'red') ? 'Ракети (Крилаті / Балістика)' : 'Всі загрози';
 
                     const popup = `
                         <div class="popup-title">${dName} район</div>
@@ -1293,7 +1299,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
                 const pulseClass = isDefense ? '' : (
                     (currentThreatMode === 'red' && score >= 75) ? 'pulse-marker-red' :
-                    (currentThreatMode === 'orange' && score >= 75) ? 'pulse-marker-orange' :
                     (currentThreatMode === 'yellow' && score >= 75 ? 'pulse-marker-yellow' : '')
                 );
 
@@ -1313,7 +1318,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
                 const popupContent = `
                     <div class="popup-title">${obj.name}</div>
-                    <div class="popup-cat"><i class="fa-solid ${getCategoryIcon(obj.category)}"></i> ${obj.category.toUpperCase()} • ${obj.district}</div>
+                    <div class="popup-cat"><i class="fa-solid ${getCategoryIcon(obj.category)}"></i> ${formatCategoryUA(obj.category)} • ${obj.district}</div>
                     <div class="popup-score-box">
                         <span style="font-size:11px; color:#cbd5e1;">${scoreLabel}</span>
                         <span class="popup-score-num" style="color:${color};">${score}/100</span>
@@ -1329,19 +1334,30 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             });
         }
 
+        function formatCategoryUA(cat) {
+            switch(cat) {
+                case 'energy': return 'Енергетика';
+                case 'transport': return 'Мости / Транспорт';
+                case 'admin': return 'Влада / Зв\'язок';
+                case 'industry': return 'ВПК / Промисловість';
+                case 'defense': return 'Ешелони ППО & Турелі';
+                default: return 'Інфраструктура';
+            }
+        }
+
         function formatThreatTypeUA(type) {
             switch(type) {
                 case 'drone_shahed':
                 case 'drone_jet':
                     return 'Ударний БпЛА (Shahed)';
                 case 'drone_decoy':
-                    return 'БпЛА-приманка (без Б/Ч)';
+                    return 'Дрон-приманка';
                 case 'missile_ballistic':
                     return 'Балістична ракета';
                 case 'missile_cruise':
                     return 'Крилата ракета';
                 default:
-                    return 'Повітряна ціль';
+                    return 'Ударний БпЛА (Shahed)';
             }
         }
 
@@ -1352,11 +1368,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 case 'direct_hit':
                     return 'Пряме влучання';
                 case 'fire':
-                    return 'Займання / пожежа';
+                    return 'Локальна пожежа';
                 case 'intercepted_airburst':
                     return 'Збиття в повітрі';
                 default:
-                    return 'Фіксація влучання / уламків';
+                    return 'Падіння уламків';
             }
         }
 
@@ -1395,14 +1411,14 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
                 const marker = L.marker([inc.lat, inc.lon], { icon: incidentIcon });
                 const popup = `
-                    <div class="popup-title"><i class="fa-solid fa-triangle-exclamation" style="color:${incColor}"></i> ${inc.location_hint}</div>
-                    <div class="popup-cat">${inc.district} • ${inc.datetime}</div>
-                    <div style="font-size:11px; margin:4px 0; line-height:1.4;">
-                        <b>Загроза:</b> ${threatUA}<br>
-                        <b>Характер:</b> ${impactUA}<br>
-                        <b>Джерело:</b> <i>${inc.source}</i>
+                    <div class="popup-title" style="margin-bottom:6px;"><i class="fa-solid fa-triangle-exclamation" style="color:${incColor}"></i> ${inc.district}</div>
+                    <div style="font-size:11px; line-height:1.5; color:#cbd5e1;">
+                        <div><b>Локація:</b> ${inc.district}, ${inc.location_hint}</div>
+                        <div><b>Час:</b> ${inc.datetime}</div>
+                        <div><b>Тип загрози:</b> ${threatUA}</div>
+                        <div><b>Наслідки:</b> ${inc.description || impactUA}</div>
+                        <div><b>Джерело:</b> ${inc.source}</div>
                     </div>
-                    <div class="popup-desc" style="border-top:1px solid rgba(255,255,255,0.1); padding-top:4px;">${inc.description}</div>
                 `;
                 marker.bindPopup(popup);
                 incidentsLayerGroup.addLayer(marker);
@@ -1513,7 +1529,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 card.innerHTML = `
                     <div class="district-info">
                         <h4>${obj.name}</h4>
-                        <p>${obj.district} • ${obj.category.toUpperCase()}</p>
+                        <p>${obj.district} • ${formatCategoryUA(obj.category)}</p>
                     </div>
                     <div class="score-pill" style="background:${color}33; color:${color}; border:1px solid ${color};">
                         ${score}
@@ -1531,7 +1547,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
             INCIDENTS_DATA.forEach(inc => {
                 if (currentThreatMode === 'yellow' && inc.alert_level !== 'yellow') return;
-                if (currentThreatMode === 'orange' && inc.alert_level !== 'orange') return;
                 if (currentThreatMode === 'red' && inc.alert_level !== 'red') return;
 
                 if (cutoff) {
@@ -1541,17 +1556,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 displayCount++;
                 if (displayCount > 60) return; // keep side list responsive
 
-                let badgeColor = '#cbd5e1';
-                let badgeBg = '#334155';
-                if (inc.threat_type === 'drone_jet' || inc.alert_level === 'orange') {
-                    badgeColor = '#f97316';
-                    badgeBg = '#f9731622';
-                } else if (inc.alert_level === 'red') {
+                let badgeColor = '#eab308';
+                let badgeBg = '#eab30822';
+                if (inc.alert_level === 'red') {
                     badgeColor = '#ef4444';
                     badgeBg = '#ef444422';
-                } else if (inc.alert_level === 'yellow') {
-                    badgeColor = '#eab308';
-                    badgeBg = '#eab30822';
                 }
 
                 const card = document.createElement('div');
@@ -1578,14 +1587,16 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             const summary = RISK_DATA.incidents_summary || {};
             const byThreat = summary.by_threat || {};
             const total = summary.total || INCIDENTS_DATA.length;
-            const jet = byThreat.drone_jet || 0;
+            const shahed = (byThreat.drone_shahed || 0) + (byThreat.drone_jet || 0);
             const missiles = (byThreat.missile_ballistic || 0) + (byThreat.missile_cruise || 0);
             const turrets = RISK_DATA.objects.filter(o => o.category === 'defense').length;
 
             const elTotal = document.getElementById('modal-nblm-total');
             if (elTotal) elTotal.innerText = total;
+            const elShahed = document.getElementById('modal-nblm-shahed');
+            if (elShahed) elShahed.innerText = shahed;
             const elJet = document.getElementById('modal-nblm-jet');
-            if (elJet) elJet.innerText = jet;
+            if (elJet) elJet.innerText = shahed;
             const elMissiles = document.getElementById('modal-nblm-missiles');
             if (elMissiles) elMissiles.innerText = missiles;
             const elTurrets = document.getElementById('modal-nblm-turrets');
@@ -1629,6 +1640,18 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         // Analytics Modal
         function openAnalyticsModal() {
             document.getElementById('analyticsModal').classList.add('open');
+            if (TS_EVAL && TS_EVAL.metrics) {
+                const elRoc = document.getElementById('metric-roc-auc');
+                if (elRoc) elRoc.innerText = TS_EVAL.metrics.model_roc_auc;
+                const elBase = document.getElementById('metric-baseline-auc');
+                if (elBase) elBase.innerText = TS_EVAL.metrics.baseline_roc_auc;
+                const elBrier = document.getElementById('metric-brier');
+                if (elBrier) elBrier.innerText = TS_EVAL.metrics.model_brier_score;
+            }
+            if (TS_STATS && TS_STATS.total_alerts) {
+                const elCnt = document.getElementById('metric-alerts-cnt');
+                if (elCnt) elCnt.innerText = TS_STATS.total_alerts;
+            }
             renderHourlyChart();
         }
 
