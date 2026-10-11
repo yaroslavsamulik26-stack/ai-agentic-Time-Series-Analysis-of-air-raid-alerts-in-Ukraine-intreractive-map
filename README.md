@@ -25,7 +25,7 @@ This project combines **leak-free Time Series forecasting** of alert hazard prob
    - 6-Month analytical horizon: 169 alert episodes from April 11 to October 11, 2026.
    - Chronological temporal train/test split: Training on alerts up to August 31, 2026; holdout evaluation on September 1 – October 11, 2026.
    - All features at time $T$ (historical alert density, inter-alert intervals, cyclical harmonic diurnal phases) are strictly backward-looking.
-   - Outperforms baseline empirical frequency: **ROC-AUC: 0.651**, **Brier Score: 0.235**.
+   - Outperforms baseline empirical frequency: **ROC-AUC: 0.677** (Baseline: 0.658), **Brier Score: 0.035**.
 2. **Predictive Target Probability Engine ($P_{\text{Target}}$):**
    - **Complete elimination of misleading strike/debris point pins**: In accordance with operational security (OPSEC) and data veracity, official releases publish data at the district level without disclosing exact coordinates.
    - Replaces uncertain pins with a two-layer hybrid predictive engine that estimates strike probability $P_{\text{Target}}(i, t, m) \in [0\%, 100\%]$ for 44 intact critical facilities (energy, transport, defense industry, admin).
