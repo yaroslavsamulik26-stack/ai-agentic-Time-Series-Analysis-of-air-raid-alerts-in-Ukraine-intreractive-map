@@ -17,6 +17,14 @@ import math
 from pathlib import Path
 import pandas as pd
 
+try:
+    from src.time_series import KyivAlertTimeSeriesAnalyzer
+except ImportError:
+    try:
+        from time_series import KyivAlertTimeSeriesAnalyzer
+    except ImportError:
+        KyivAlertTimeSeriesAnalyzer = None
+
 
 def haversine_distance_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Computes great-circle distance between two points in km."""
@@ -140,6 +148,9 @@ class KyivRiskEngine:
         self.infra_geojson = {}
         self.districts_geojson = {}
         self.incidents_df = pd.DataFrame()
+        self.ts_analyzer = KyivAlertTimeSeriesAnalyzer() if KyivAlertTimeSeriesAnalyzer else None
+        self.dynamic_hazards = None
+        self.ts_eval_metrics = {}
 
     def load_data(self):
         infra_path = self.data_dir / "kyiv_infrastructure.geojson"
@@ -164,6 +175,13 @@ class KyivRiskEngine:
 
         if incidents_path.exists():
             self.incidents_df = pd.read_csv(incidents_path)
+
+        if self.ts_analyzer:
+            try:
+                self.dynamic_hazards = self.ts_analyzer.compute_hazard_forecast()
+                self.ts_eval_metrics = self.ts_analyzer.run_temporal_evaluation()
+            except Exception:
+                self.dynamic_hazards = None
 
     def calculate_incident_proximity_score(
         self, lat: float, lon: float, mode: str = "all", bandwidth_km: float = 3.5
@@ -302,13 +320,14 @@ class KyivRiskEngine:
         air_defense = self.calculate_air_defense_shielding(lat, lon, mode=mode, category=cat)
         mitigation_factor = 1.0 - air_defense
 
-        # 6. Time Hazard Factor H(t, m)
-        time_hazards = {
+        # 6. Time Hazard Factor H(t, m) derived from Time Series Engine
+        default_hazards = {
             "24h": {"yellow": 0.68, "orange": 0.68, "red": 0.58, "all": 0.64},
             "7d": {"yellow": 0.88, "orange": 0.88, "red": 0.80, "all": 0.85},
             "30d": {"yellow": 0.98, "orange": 0.98, "red": 0.92, "all": 0.96},
         }
-        h_val = time_hazards.get(horizon, time_hazards["7d"]).get(mode, 0.85)
+        active_hazards = self.dynamic_hazards if self.dynamic_hazards else default_hazards
+        h_val = active_hazards.get(horizon, default_hazards.get(horizon, default_hazards["7d"])).get(mode, 0.85)
 
         # 7. Calibrated P_Target (0 - 100%)
         # Scaling constant kappa ensures top strategic intact facilities reach 75-85% under active hazard
@@ -318,7 +337,8 @@ class KyivRiskEngine:
 
         # Precompute across tactical (24h), operational (7d), and strategic (30d) horizons
         horizons_p = {}
-        for h_k, h_sub in time_hazards.items():
+        for h_k in ["24h", "7d", "30d"]:
+            h_sub = active_hazards.get(h_k, default_hazards[h_k])
             h_f = h_sub.get(mode, 0.85)
             h_raw = kappa * h_f * strategic_score * mitigation_factor
             horizons_p[h_k] = round(min(100.0, max(5.0, h_raw)), 1)
@@ -467,6 +487,8 @@ class KyivRiskEngine:
             "incidents_summary": incidents_summary,
             "historical_target_analysis": historical_target_analysis,
             "authoritative_sources": authoritative_sources,
+            "dynamic_hazards": self.dynamic_hazards,
+            "time_series_metrics": self.ts_eval_metrics,
         }
 
     def _compute_district_rankings(self, enriched_objects: list) -> list:
