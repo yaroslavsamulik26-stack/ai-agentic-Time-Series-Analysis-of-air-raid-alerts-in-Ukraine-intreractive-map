@@ -1,0 +1,10 @@
+# GitHub Linguist Language Overrides
+# Mark compiled HTML artifact and data files as generated/non-detectable
+# so GitHub correctly identifies the repository language as Python (100%).
+
+index.html linguist-generated=true
+index.html linguist-detectable=false
+*.html linguist-generated=true
+*.html linguist-detectable=false
+data/** linguist-detectable=false
+AI_CONVERSATION_LOG.txt linguist-detectable=false
