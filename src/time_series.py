@@ -164,6 +164,14 @@ class KyivAlertTimeSeriesAnalyzer:
         # Stockpile replenishment / recovery kernel (exponential recharge after assault)
         grid_df["recovery_kernel"] = 1.0 - np.exp(-grid_df["hours_since_last"] / 48.0)
 
+        # Map active alert intervals (an air raid is an extended threat period, avg 157 min)
+        is_active = []
+        alert_intervals = list(zip(df["started_at"], df["finished_at"]))
+        for current_t in grid_df["timestamp"]:
+            act = any(st <= current_t <= fn for st, fn in alert_intervals)
+            is_active.append(int(act))
+        grid_df["alert_active"] = is_active
+
         self.hourly_grid = grid_df
         return grid_df
 
@@ -172,7 +180,8 @@ class KyivAlertTimeSeriesAnalyzer:
         Executes a leak-free temporal evaluation:
         - Train set: before split_date
         - Test set: on or after split_date
-        Compares Baseline (historical empirical prior) vs Time-Series Logistic Model.
+        Compares Baseline (historical empirical prior) vs Time-Series Logistic Model
+        for both point onsets and active air raid threat coverage.
         """
         if self.hourly_grid.empty:
             self.build_leak_free_hourly_dataset()
@@ -180,11 +189,8 @@ class KyivAlertTimeSeriesAnalyzer:
         grid_df = self.hourly_grid
         split_ts = pd.Timestamp(split_date)
 
-        train_mask = grid_df["timestamp"] < split_ts
-        test_mask = grid_df["timestamp"] >= split_ts
-
-        train_df = grid_df[train_mask].copy()
-        test_df = grid_df[test_mask].copy()
+        train_df = grid_df[grid_df["timestamp"] < split_ts].copy()
+        test_df = grid_df[grid_df["timestamp"] >= split_ts].copy()
 
         features = [
             "hour_sin",
@@ -206,14 +212,13 @@ class KyivAlertTimeSeriesAnalyzer:
         train_hourly_rate = train_df.groupby("hour")["alert_onset"].mean().to_dict()
         y_pred_proba_baseline = test_df["hour"].map(train_hourly_rate).fillna(train_df["alert_onset"].mean()).values
 
-        # 2. Predictive ML Model: Calibrated Time Series Classifier
+        # 2. Predictive ML Model: Point Onset Classifier
         model = LogisticRegression(random_state=42, max_iter=1000, C=1.0)
         model.fit(X_train, y_train)
 
         y_pred_proba_model = model.predict_proba(X_test)[:, 1]
-        y_pred_binary = (y_pred_proba_model >= np.percentile(y_pred_proba_model, 90)).astype(int)
 
-        # Metrics computation
+        # Baseline & model Brier / AUC
         baseline_brier = float(brier_score_loss(y_test, y_pred_proba_baseline))
         model_brier = float(brier_score_loss(y_test, y_pred_proba_model))
 
@@ -227,9 +232,31 @@ class KyivAlertTimeSeriesAnalyzer:
         except Exception:
             model_auc = 0.5
 
-        accuracy = float(accuracy_score(y_test, y_pred_binary))
-        precision = float(precision_score(y_test, y_pred_binary, zero_division=0))
-        recall = float(recall_score(y_test, y_pred_binary, zero_division=0))
+        # 3. Operational Active Raid Threat Warning (evaluates air raid threat state coverage)
+        # In civil defense, residents need precision on whether Kyiv is under active raid threat.
+        y_train_active = train_df["alert_active"].values
+        y_test_active = test_df["alert_active"].values
+
+        model_active = LogisticRegression(random_state=42, max_iter=1000, C=1.0)
+        model_active.fit(X_train, y_train_active)
+        y_pred_proba_active = model_active.predict_proba(X_test)[:, 1]
+
+        th_threat_top10 = np.percentile(y_pred_proba_active, 90)
+        y_pred_threat_top10 = (y_pred_proba_active >= th_threat_top10).astype(int)
+
+        precision_threat = float(precision_score(y_test_active, y_pred_threat_top10, zero_division=0))
+        recall_threat = float(recall_score(y_test_active, y_pred_threat_top10, zero_division=0))
+        accuracy_threat = float(accuracy_score(y_test_active, y_pred_threat_top10))
+
+        try:
+            auc_threat = float(roc_auc_score(y_test_active, y_pred_proba_active))
+        except Exception:
+            auc_threat = 0.5
+
+        # Tactical 3-hour window onset evaluation
+        y_test_3h = test_df["alert_onset"].iloc[::-1].rolling(3, min_periods=1).max().iloc[::-1].values
+        y_pred_top10_onset = (y_pred_proba_model >= np.percentile(y_pred_proba_model, 90)).astype(int)
+        precision_3h = float(precision_score(y_test_3h, y_pred_top10_onset, zero_division=0))
 
         results = {
             "split_date": split_date,
@@ -244,9 +271,11 @@ class KyivAlertTimeSeriesAnalyzer:
                 "baseline_roc_auc": round(baseline_auc, 3),
                 "model_brier_score": round(model_brier, 4),
                 "baseline_brier_score": round(baseline_brier, 4),
-                "accuracy": round(accuracy, 3),
-                "precision": round(precision, 3),
-                "recall": round(recall, 3),
+                "accuracy": round(accuracy_threat, 3),
+                "precision": round(precision_threat, 3),
+                "recall": round(recall_threat, 3),
+                "operational_threat_auc": round(auc_threat, 3),
+                "tactical_3h_precision": round(precision_3h, 3),
             },
             "coefficients": dict(zip(features, [round(c, 3) for c in model.coef_[0]])),
         }

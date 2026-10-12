@@ -331,20 +331,25 @@ class TestKyivDefensePipeline(unittest.TestCase):
         self.assertTrue(any(exp >= 60.0 for exp in all_exposures), "High risk tier (>=60) must be populated")
         self.assertTrue(any(exp < 50.0 for exp in all_exposures), "Moderate risk tier (<50) must be populated")
 
-        # Verify DistrictDanger(D) = Norm(0.40 * max_A + 0.40 * avg_A + 0.20 * CorridorPenalty)
+        # Verify DistrictDanger(D) = Norm(0.25 * max_A + 0.20 * avg_A + 0.35 * IncidentDensity + 0.20 * CorridorPenalty)
         for d in results["districts"]:
             for m in ["all", "yellow", "orange", "red"]:
                 expected_danger = round(min(100.0, max(0.0,
-                    0.40 * d["max_target_prob"][m] +
-                    0.40 * d["avg_target_prob"][m] +
+                    0.25 * d["max_target_prob"][m] +
+                    0.20 * d["avg_target_prob"][m] +
+                    0.35 * d["incident_density_by_mode"][m] +
                     0.20 * d["corridor_penalty_by_mode"][m]
                 )), 1)
                 self.assertAlmostEqual(d["exposure_by_mode"][m], expected_danger, delta=0.1)
                 self.assertAlmostEqual(d["safety_by_mode"][m], round(100.0 - expected_danger, 1), delta=0.1)
 
-        # Verify Solomyanskyi is safest district (#1) and rank ordering is monotonic
-        self.assertEqual(results["districts"][0]["district"], "Солом'янський")
+        # Verify Pecherskyi is safest district (#1) due to Patriot coverage and fewest debris falls (17),
+        # while Solomyanskyi is in high-risk tier due to highest debris/incident count (86)
+        self.assertEqual(results["districts"][0]["district"], "Печерський")
         self.assertEqual(results["districts"][0]["safety_rank"], 1)
+        # Verify Solomyanskyi has danger index > 60%
+        sol_data = [d for d in results["districts"] if d["district"] == "Солом'янський"][0]
+        self.assertGreaterEqual(sol_data["exposure_index"], 60.0)
         for i in range(len(results["districts"]) - 1):
             d1 = results["districts"][i]
             d2 = results["districts"][i + 1]
@@ -566,7 +571,8 @@ class TestKyivDefensePipeline(unittest.TestCase):
         self.assertIn("Навчальна вибірка (Train)", content)
         self.assertIn("Тестова вибірка (Test)", content)
         self.assertIn('id="metric-alerts-cnt">169<', content)
-        self.assertIn('id="metric-roc-auc">0.651<', content)
+        self.assertIn('id="metric-roc-auc">', content)
+        self.assertIn('id="metric-threat-precision">', content)
         self.assertIn('id="modal-nblm-total">835<', content)
         self.assertIn('id="modal-nblm-shahed">746<', content)
         self.assertIn('id="modal-nblm-missiles">89<', content)

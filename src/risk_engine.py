@@ -693,16 +693,23 @@ class KyivRiskEngine:
                     data["avg_target_prob"][m] = 35.0
                     data["max_target_prob"][m] = 35.0
 
-        # Calculate district danger and safety scores using the agreed deterministic formula:
-        # DistrictDanger(D) = Norm(0.40 * max_{i in D}(A_i) + 0.40 * avg_{i in D}(A_i) + 0.20 * CorridorPenalty(D))
+        # Maximum incidents for relative density normalization
+        max_incidents = max((d["incidents_count"] for d in district_stats.values()), default=1)
+        if max_incidents <= 0:
+            max_incidents = 1
+
+        # Calculate district danger and safety scores using the updated formula:
+        # DistrictDanger(D) = Norm(0.25 * max_{i in D}(A_i) + 0.20 * avg_{i in D}(A_i) + 0.35 * IncidentDensity(D) + 0.20 * CorridorPenalty(D))
         for m in ["all", "yellow", "orange", "red"]:
             for d, data in district_stats.items():
                 avg_p = data["avg_target_prob"][m]
                 max_p = data["max_target_prob"][m]
                 cp = self.calculate_corridor_proximity(data["center_lat"], data["center_lon"], mode=m)
+                inc_cnt = data["incidents_by_mode"].get(m, data["incidents_count"])
+                inc_density = round((inc_cnt / max_incidents) * 100.0, 1)
 
                 # Composite District Danger Index [0, 100]
-                raw_danger = 0.40 * max_p + 0.40 * avg_p + 0.20 * cp
+                raw_danger = 0.25 * max_p + 0.20 * avg_p + 0.35 * inc_density + 0.20 * cp
                 exp_val = round(min(100.0, max(0.0, raw_danger)), 1)
                 safety_val = round(max(0.0, min(100.0, 100.0 - exp_val)), 1)
 
@@ -712,10 +719,12 @@ class KyivRiskEngine:
                     data["status_by_mode"] = {}
                     data["badge_by_mode"] = {}
                     data["corridor_penalty_by_mode"] = {}
+                    data["incident_density_by_mode"] = {}
 
                 data["exposure_by_mode"][m] = exp_val
                 data["safety_by_mode"][m] = safety_val
                 data["corridor_penalty_by_mode"][m] = round(cp, 1)
+                data["incident_density_by_mode"][m] = inc_density
 
                 if exp_val >= 70:
                     st = "КРИТИЧНИЙ РИЗИК (висока щільність цілей, енергетика/ВПК)"
@@ -756,6 +765,7 @@ class KyivRiskEngine:
             data["safety_score"] = data["safety_by_mode"]["all"]
             data["danger_index"] = data["exposure_by_mode"]["all"]
             data["corridor_penalty"] = data["corridor_penalty_by_mode"]["all"]
+            data["incident_density"] = data["incident_density_by_mode"]["all"]
             data["status"] = data["status_by_mode"]["all"]
             data["badge_color"] = data["badge_by_mode"]["all"]
             data["safety_rank"] = data["safety_rank_by_mode"]["all"]
