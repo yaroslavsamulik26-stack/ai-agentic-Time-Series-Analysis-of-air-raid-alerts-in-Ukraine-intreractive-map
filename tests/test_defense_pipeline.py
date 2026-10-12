@@ -500,6 +500,24 @@ class TestKyivDefensePipeline(unittest.TestCase):
         self.assertIn("50-64: Підвищена увага", content)
         self.assertIn("&lt;50: Помірний ризик", content)
 
+        # Floating, draggable, closable UI controls verification
+        self.assertIn('id="topNavbar"', content)
+        self.assertIn('closeTopNavbar()', content)
+        self.assertIn('id="openTopNavbarBtn"', content)
+        self.assertIn('openTopNavbar()', content)
+        self.assertIn('id="mapLegend"', content)
+        self.assertIn('id="legendDragHeader"', content)
+        self.assertIn('closeLegend()', content)
+        self.assertIn('id="openLegendBtn"', content)
+        self.assertIn('openLegend()', content)
+        self.assertIn('id="sidePanel"', content)
+        self.assertIn('id="panelDragHeader"', content)
+        self.assertIn('closeSidePanel()', content)
+        self.assertIn('id="openSidePanelBtn"', content)
+        self.assertIn('openSidePanel()', content)
+        self.assertIn('id="tileSelector"', content)
+        self.assertIn('makeDraggable', content)
+
         # District Popup Factor Breakdown
         self.assertIn("Фактори небезпеки:</b> Макс A", content)
         self.assertIn("Сер. A", content)
@@ -649,6 +667,15 @@ toggleCategoryFilter("energy");
 renderDistrictsList();
 renderObjectsList();
 renderPriorityTargetsList();
+closeTopNavbar();
+openTopNavbar();
+toggleTopNavbar();
+closeSidePanel();
+openSidePanel();
+toggleSidePanel();
+closeLegend();
+openLegend();
+toggleLegend();
 if (typeof getDistrictColor !== "function") throw new Error("getDistrictColor missing");
 if (getDistrictColor(75) !== "#dc2626") throw new Error("District 75 should be #dc2626");
 if (getDistrictColor(65) !== "#ea580c") throw new Error("District 65 should be #ea580c");

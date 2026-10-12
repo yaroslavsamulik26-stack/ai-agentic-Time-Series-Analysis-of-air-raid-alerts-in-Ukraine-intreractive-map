@@ -211,7 +211,33 @@
             box-shadow: 0 4px 15px rgba(0,0,0,0.5) !important;
         }
 
-        /* Reopen floating button */
+        /* Floating Reopen Buttons */
+        .reopen-nav-btn {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 1100;
+            background: linear-gradient(135deg, #1e3a8a, #0284c7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            color: #ffffff;
+            padding: 7px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            transition: all 0.2s ease;
+        }
+
+        .reopen-nav-btn:hover {
+            background: linear-gradient(135deg, #2563eb, #0369a1);
+            transform: translateY(-1px);
+        }
+
         .reopen-panel-btn {
             position: absolute;
             top: 70px;
@@ -229,13 +255,56 @@
             display: none;
             align-items: center;
             gap: 6px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
             transition: all 0.2s ease;
         }
 
         .reopen-panel-btn:hover {
             background: linear-gradient(135deg, #2563eb, #0369a1);
             transform: translateY(-1px);
+        }
+
+        .reopen-legend-btn {
+            position: absolute;
+            bottom: 16px;
+            left: 12px;
+            z-index: 1000;
+            background: var(--panel-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-color);
+            color: #cbd5e1;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+            transition: all 0.2s ease;
+        }
+
+        .reopen-legend-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: #ffffff;
+            border-color: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .top-navbar-close-btn {
+            margin-left: auto;
+            font-size: 18px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+        }
+
+        .top-navbar-close-btn:hover {
+            background: rgba(255, 255, 255, 0.12);
         }
 
         .filter-action-btn {
@@ -519,21 +588,38 @@
             white-space: nowrap;
         }
 
-        /* Map Legend Overlay - Compact */
+        /* Map Legend Overlay - Floating & Draggable */
         .map-legend {
             position: absolute;
             bottom: 16px;
             left: 12px;
             z-index: 1000;
             background: var(--panel-bg);
-            backdrop-filter: blur(10px);
-            padding: 8px 12px;
-            border-radius: 8px;
+            backdrop-filter: blur(14px);
+            border-radius: 10px;
             border: 1px solid var(--border-color);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.45);
             font-size: 11px;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
+            width: min(290px, calc(100vw - 24px));
+            transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+
+        .map-legend .panel-drag-header {
+            padding: 6px 10px;
+            background: rgba(0, 0, 0, 0.4);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .legend-content {
+            padding: 8px 12px;
+            display: flex;
+            flex-direction: column;
             gap: 4px;
+            max-height: calc(100vh - 200px);
+            overflow-y: auto;
         }
 
         .legend-item {
@@ -548,7 +634,7 @@
             border-radius: 50%;
         }
 
-        /* Base Tile Switcher in Map (Google Roadmap & Google Satellite Only) */
+        /* Base Tile Switcher in Map (Google Roadmap & Google Satellite Only) - Floating & Draggable */
         .tile-selector {
             position: absolute;
             bottom: 16px;
@@ -560,7 +646,12 @@
             border-radius: 8px;
             padding: 3px;
             display: flex;
+            align-items: center;
             gap: 3px;
+            cursor: move;
+            user-select: none;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            transition: opacity 0.2s ease;
         }
 
         .tile-btn {
@@ -792,6 +883,25 @@
                 width: auto;
                 max-height: 48vh;
             }
+            .map-legend {
+                bottom: 50px;
+                left: 8px;
+                max-width: calc(100vw - 16px);
+                max-height: 40vh;
+            }
+            .reopen-panel-btn {
+                top: auto;
+                bottom: 8px;
+                right: 8px;
+            }
+            .reopen-nav-btn {
+                top: 8px;
+                left: 8px;
+            }
+            .reopen-legend-btn {
+                bottom: 8px;
+                left: 8px;
+            }
             .leaflet-popup-content {
                 max-width: 260px !important;
                 max-height: 300px !important;
@@ -887,9 +997,15 @@
     <!-- Map Container -->
     <div id="map"></div>
 
+    <!-- Reopen Floating Nav Button (when navbar is closed) -->
+    <button id="openTopNavbarBtn" class="reopen-nav-btn" onclick="openTopNavbar()" title="Відкрити панель навігації та фільтрів">
+        <i class="fa-solid fa-bars"></i> Навігація & Фільтри
+    </button>
+
     <!-- Top Navigation Bar - Draggable & Compact -->
     <div class="top-navbar" id="topNavbar">
         <div class="title-block">
+            <i class="fa-solid fa-grip-lines" style="color:var(--text-muted); cursor:move; font-size:11px;" title="Перетягнути панель"></i>
             <div class="title-badge">Defense OSINT</div>
             <div class="title-text">
                 <h1>Kyiv Defense Map</h1>
@@ -937,6 +1053,8 @@
         <button class="btn-action-small active" id="toggleSidePanelBtn" onclick="toggleSidePanel()" title="Відкрити/закрити аналітичну панель оцінки небезпеки">
             <i class="fa-solid fa-chart-pie"></i> Панель небезпеки
         </button>
+
+        <button class="btn-panel-close top-navbar-close-btn" onclick="closeTopNavbar()" title="Згорнути панель навігації">&times;</button>
 
         <!-- Top Category Filters Row -->
         <div class="top-cat-filters" id="topCategoryFilters">
@@ -1113,33 +1231,47 @@
         </div>
     </div>
 
-    <!-- Tile Layer Switcher: Google Roadmap & Google Satellite ONLY -->
-    <div class="tile-selector">
+    <!-- Tile Layer Switcher: Google Roadmap & Google Satellite ONLY - Floating & Draggable -->
+    <div class="tile-selector" id="tileSelector">
+        <i class="fa-solid fa-grip-lines-vertical" style="color:var(--text-muted); font-size:10px; margin: 0 3px; cursor:move;" title="Перетягнути перемикач мапи"></i>
         <button class="tile-btn active" data-tile="gmaps_road" onclick="setBaseTile('gmaps_road')">Google Maps</button>
         <button class="tile-btn" data-tile="gmaps_sat" onclick="setBaseTile('gmaps_sat')">Супутник</button>
     </div>
 
-    <!-- Legend Overlay -->
-    <div class="map-legend">
-        <div style="font-weight:700; margin-bottom:2px; color:#cbd5e1;">Рівень небезпеки районів:</div>
-        <div class="legend-item"><div class="legend-color" style="background:#dc2626;"></div> &ge;70/100: Критичний рівень небезпеки</div>
-        <div class="legend-item"><div class="legend-color" style="background:#ea580c;"></div> 60-69/100: Високий рівень небезпеки</div>
-        <div class="legend-item"><div class="legend-color" style="background:#eab308;"></div> 50-59/100: Підвищений рівень небезпеки</div>
-        <div class="legend-item"><div class="legend-color" style="background:#10b981;"></div> &lt;50/100: Помірний рівень небезпеки</div>
-        <div style="margin-top:4px; border-top:1px solid rgba(255,255,255,0.1); padding-top:4px; display:flex; flex-direction:column; gap:3px;">
-            <div style="font-weight:700; margin-bottom:1px; color:#cbd5e1;">Тактичний статус цілей (A<sub>i</sub>):</div>
-            <div class="legend-item"><div class="legend-color" style="background:#dc2626;"></div> 80-100: Критична ціль</div>
-            <div class="legend-item"><div class="legend-color" style="background:#ea580c;"></div> 65-79: Високий пріоритет</div>
-            <div class="legend-item"><div class="legend-color" style="background:#eab308;"></div> 50-64: Підвищена увага</div>
-            <div class="legend-item"><div class="legend-color" style="background:#16a34a;"></div> &lt;50: Помірний ризик</div>
+    <!-- Reopen Floating Legend Button (when legend is closed) -->
+    <button id="openLegendBtn" class="reopen-legend-btn" onclick="openLegend()" title="Відкрити легенду мапи">
+        <i class="fa-solid fa-list-ul"></i> Легенда
+    </button>
+
+    <!-- Legend Overlay - Draggable & Closable -->
+    <div class="map-legend" id="mapLegend">
+        <div class="panel-drag-header" id="legendDragHeader">
+            <div class="panel-drag-title">
+                <i class="fa-solid fa-list-ul"></i> Легенда мапи
+            </div>
+            <button class="btn-panel-close" onclick="closeLegend()" title="Закрити легенду">&times;</button>
         </div>
-        <div style="margin-top:4px; border-top:1px solid rgba(255,255,255,0.1); padding-top:4px; display:flex; flex-direction:column; gap:3px;">
-            <div class="legend-item"><i class="fa-solid fa-crosshairs" style="color:#ef4444; font-size:10px;"></i> Пріоритетні цілі (Індекс небезпеки A<sub>i</sub>)</div>
-            <div class="legend-item"><i class="fa-solid fa-shield-halved" style="color:#10b981; font-size:10px;"></i> Ешелон ППО & турелі</div>
-            <div class="legend-item"><i class="fa-solid fa-route" style="color:#38bdf8; font-size:10px;"></i> Вектор підльоту загроз</div>
-        </div>
-        <div style="margin-top:5px; border-top:1px solid rgba(255,255,255,0.08); padding-top:4px; font-size:8.5px; color:#94a3b8; line-height:1.25;">
-            <i class="fa-solid fa-circle-info" style="color:#eab308;"></i> <b>Ремарка:</b> Аналітика на основі минулих спостережень. Орієнтуйтеся на офіційні канали ПС ЗСУ.
+        <div class="legend-content">
+            <div style="font-weight:700; margin-bottom:2px; color:#cbd5e1;">Рівень небезпеки районів:</div>
+            <div class="legend-item"><div class="legend-color" style="background:#dc2626;"></div> &ge;70/100: Критичний рівень небезпеки</div>
+            <div class="legend-item"><div class="legend-color" style="background:#ea580c;"></div> 60-69/100: Високий рівень небезпеки</div>
+            <div class="legend-item"><div class="legend-color" style="background:#eab308;"></div> 50-59/100: Підвищений рівень небезпеки</div>
+            <div class="legend-item"><div class="legend-color" style="background:#10b981;"></div> &lt;50/100: Помірний рівень небезпеки</div>
+            <div style="margin-top:4px; border-top:1px solid rgba(255,255,255,0.1); padding-top:4px; display:flex; flex-direction:column; gap:3px;">
+                <div style="font-weight:700; margin-bottom:1px; color:#cbd5e1;">Тактичний статус цілей (A<sub>i</sub>):</div>
+                <div class="legend-item"><div class="legend-color" style="background:#dc2626;"></div> 80-100: Критична ціль</div>
+                <div class="legend-item"><div class="legend-color" style="background:#ea580c;"></div> 65-79: Високий пріоритет</div>
+                <div class="legend-item"><div class="legend-color" style="background:#eab308;"></div> 50-64: Підвищена увага</div>
+                <div class="legend-item"><div class="legend-color" style="background:#16a34a;"></div> &lt;50: Помірний ризик</div>
+            </div>
+            <div style="margin-top:4px; border-top:1px solid rgba(255,255,255,0.1); padding-top:4px; display:flex; flex-direction:column; gap:3px;">
+                <div class="legend-item"><i class="fa-solid fa-crosshairs" style="color:#ef4444; font-size:10px;"></i> Пріоритетні цілі (Індекс небезпеки A<sub>i</sub>)</div>
+                <div class="legend-item"><i class="fa-solid fa-shield-halved" style="color:#10b981; font-size:10px;"></i> Ешелон ППО & турелі</div>
+                <div class="legend-item"><i class="fa-solid fa-route" style="color:#38bdf8; font-size:10px;"></i> Вектор підльоту загроз</div>
+            </div>
+            <div style="margin-top:5px; border-top:1px solid rgba(255,255,255,0.08); padding-top:4px; font-size:8.5px; color:#94a3b8; line-height:1.25;">
+                <i class="fa-solid fa-circle-info" style="color:#eab308;"></i> <b>Ремарка:</b> Аналітика на основі минулих спостережень. Орієнтуйтеся на офіційні канали ПС ЗСУ.
+            </div>
         </div>
     </div>
 
@@ -2037,7 +2169,37 @@
             if (pane) pane.classList.add('active');
         }
 
-        // Panel Close / Open / Toggle
+        // Panels Management: Open, Close, Toggle & Z-Index
+        let currentMaxZ = 1005;
+        function bringToFront(el) {
+            if (!el || !el.style) return;
+            currentMaxZ++;
+            el.style.zIndex = currentMaxZ;
+        }
+
+        // Top Navigation Bar
+        function toggleTopNavbar() {
+            const nav = document.getElementById('topNavbar');
+            if (nav.style.display === 'none') {
+                openTopNavbar();
+            } else {
+                closeTopNavbar();
+            }
+        }
+
+        function closeTopNavbar() {
+            document.getElementById('topNavbar').style.display = 'none';
+            document.getElementById('openTopNavbarBtn').style.display = 'flex';
+        }
+
+        function openTopNavbar() {
+            const nav = document.getElementById('topNavbar');
+            nav.style.display = 'flex';
+            document.getElementById('openTopNavbarBtn').style.display = 'none';
+            bringToFront(nav);
+        }
+
+        // Side Intelligence Panel
         let searchQueryObjects = '';
         let searchQueryTargets = '';
 
@@ -2058,10 +2220,34 @@
         }
 
         function openSidePanel() {
-            document.getElementById('sidePanel').style.display = 'flex';
+            const panel = document.getElementById('sidePanel');
+            panel.style.display = 'flex';
             document.getElementById('openSidePanelBtn').style.display = 'none';
             const btn = document.getElementById('toggleSidePanelBtn');
             if (btn) btn.classList.add('active');
+            bringToFront(panel);
+        }
+
+        // Map Legend Overlay
+        function toggleLegend() {
+            const leg = document.getElementById('mapLegend');
+            if (leg.style.display === 'none') {
+                openLegend();
+            } else {
+                closeLegend();
+            }
+        }
+
+        function closeLegend() {
+            document.getElementById('mapLegend').style.display = 'none';
+            document.getElementById('openLegendBtn').style.display = 'flex';
+        }
+
+        function openLegend() {
+            const leg = document.getElementById('mapLegend');
+            leg.style.display = 'flex';
+            document.getElementById('openLegendBtn').style.display = 'none';
+            bringToFront(leg);
         }
 
         function setAllCategories(enableAll) {
@@ -2357,41 +2543,174 @@
             });
         }
 
-        // Generic Draggable Helper
-        function makeDraggable(element, handle) {
-            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-            handle.onmousedown = dragMouseDown;
+        // Generic Draggable Helper with Viewport Clamping & Touch Support
+        function shouldIgnoreDrag(target) {
+            if (!target) return false;
+            const tag = target.tagName ? target.tagName.toUpperCase() : '';
+            if (tag === 'BUTTON' || tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || tag === 'A') {
+                return true;
+            }
+            if (target.closest && (
+                target.closest('button') || 
+                target.closest('input') || 
+                target.closest('select') || 
+                target.closest('textarea') || 
+                target.closest('a') || 
+                target.closest('.filter-chip') || 
+                target.closest('.btn-panel-close') ||
+                target.closest('.no-drag')
+            )) {
+                return true;
+            }
+            return false;
+        }
 
-            function dragMouseDown(e) {
-                if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
-                e.preventDefault();
-                pos3 = e.clientX;
-                pos4 = e.clientY;
-                document.onmouseup = closeDragElement;
-                document.onmousemove = elementDrag;
+        function getEventCoords(e) {
+            if (e.touches && e.touches.length > 0) {
+                return { clientX: e.touches[0].clientX, clientY: e.touches[0].clientY };
+            }
+            return { clientX: e.clientX, clientY: e.clientY };
+        }
+
+        function makeDraggable(element, handle) {
+            if (!element || !handle) return;
+            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+
+            if (element.addEventListener) {
+                element.addEventListener('pointerdown', function() { bringToFront(element); });
+            }
+
+            if (handle.addEventListener) {
+                handle.addEventListener('mousedown', dragStart);
+                handle.addEventListener('touchstart', dragStart, { passive: false });
+            } else {
+                handle.onmousedown = dragStart;
+            }
+
+            if (typeof L !== 'undefined' && L.DomEvent) {
+                if (L.DomEvent.disableClickPropagation) L.DomEvent.disableClickPropagation(element);
+                if (L.DomEvent.disableScrollPropagation) L.DomEvent.disableScrollPropagation(element);
+            }
+
+            function dragStart(e) {
+                if (shouldIgnoreDrag(e.target)) return;
+                bringToFront(element);
+
+                if (typeof map !== 'undefined' && map && map.dragging && map.dragging.disable) {
+                    map.dragging.disable();
+                }
+
+                const coords = getEventCoords(e);
+                pos3 = coords.clientX;
+                pos4 = coords.clientY;
+
+                if (e.type === 'touchstart') {
+                    if (document.addEventListener) {
+                        document.addEventListener('touchend', dragEnd);
+                        document.addEventListener('touchcancel', dragEnd);
+                        document.addEventListener('touchmove', elementDrag, { passive: false });
+                    }
+                } else {
+                    if (e.preventDefault) e.preventDefault();
+                    if (document.addEventListener) {
+                        document.addEventListener('mouseup', dragEnd);
+                        document.addEventListener('mousemove', elementDrag);
+                    } else {
+                        document.onmouseup = dragEnd;
+                        document.onmousemove = elementDrag;
+                    }
+                }
             }
 
             function elementDrag(e) {
-                e.preventDefault();
-                pos1 = pos3 - e.clientX;
-                pos2 = pos4 - e.clientY;
-                pos3 = e.clientX;
-                pos4 = e.clientY;
-                element.style.top = (element.offsetTop - pos2) + "px";
-                element.style.left = (element.offsetLeft - pos1) + "px";
+                if (e.cancelable && e.preventDefault) {
+                    e.preventDefault();
+                }
+                if (e.stopPropagation) e.stopPropagation();
+
+                const coords = getEventCoords(e);
+                pos1 = pos3 - coords.clientX;
+                pos2 = pos4 - coords.clientY;
+                pos3 = coords.clientX;
+                pos4 = coords.clientY;
+
+                let newTop = element.offsetTop - pos2;
+                let newLeft = element.offsetLeft - pos1;
+
+                const winW = (typeof window !== 'undefined' && window.innerWidth) ? window.innerWidth : 1920;
+                const winH = (typeof window !== 'undefined' && window.innerHeight) ? window.innerHeight : 1080;
+
+                const elW = element.offsetWidth || 0;
+                const elH = element.offsetHeight || 0;
+
+                const maxLeft = Math.max(0, winW - elW);
+                const maxTop = Math.max(0, winH - Math.min(elH, 60));
+
+                newLeft = Math.max(0, Math.min(newLeft, maxLeft));
+                newTop = Math.max(0, Math.min(newTop, maxTop));
+
+                element.style.top = newTop + "px";
+                element.style.left = newLeft + "px";
                 element.style.right = 'auto';
                 element.style.bottom = 'auto';
             }
 
-            function closeDragElement() {
-                document.onmouseup = null;
-                document.onmousemove = null;
+            function dragEnd() {
+                if (typeof map !== 'undefined' && map && map.dragging && map.dragging.enable) {
+                    map.dragging.enable();
+                }
+
+                if (document.removeEventListener) {
+                    document.removeEventListener('mouseup', dragEnd);
+                    document.removeEventListener('mousemove', elementDrag);
+                    document.removeEventListener('touchend', dragEnd);
+                    document.removeEventListener('touchcancel', dragEnd);
+                    document.removeEventListener('touchmove', elementDrag);
+                } else {
+                    document.onmouseup = null;
+                    document.onmousemove = null;
+                }
             }
         }
 
-        // Initialize Dragging on Panels
+        // Viewport resize watcher keeping panels in bounds
+        function keepPanelsInViewport() {
+            if (typeof window === 'undefined') return;
+            const winW = window.innerWidth;
+            const winH = window.innerHeight;
+            if (!winW || !winH) return;
+
+            const panels = [
+                document.getElementById('topNavbar'),
+                document.getElementById('sidePanel'),
+                document.getElementById('mapLegend'),
+                document.getElementById('tileSelector')
+            ];
+
+            panels.forEach(function(el) {
+                if (!el || el.style.display === 'none') return;
+                if (el.style.top && el.style.left) {
+                    const elW = el.offsetWidth || 0;
+                    const elH = el.offsetHeight || 0;
+                    let curLeft = el.offsetLeft;
+                    let curTop = el.offsetTop;
+                    const maxL = Math.max(0, winW - elW);
+                    const maxT = Math.max(0, winH - Math.min(elH, 60));
+                    if (curLeft > maxL) el.style.left = Math.max(0, maxL) + 'px';
+                    if (curTop > maxT) el.style.top = Math.max(0, maxT) + 'px';
+                }
+            });
+        }
+
+        if (typeof window !== 'undefined' && window.addEventListener) {
+            window.addEventListener('resize', keepPanelsInViewport);
+        }
+
+        // Initialize Dragging on All Panels
         makeDraggable(document.getElementById('sidePanel'), document.getElementById('panelDragHeader'));
         makeDraggable(document.getElementById('topNavbar'), document.getElementById('topNavbar'));
+        makeDraggable(document.getElementById('mapLegend'), document.getElementById('legendDragHeader'));
+        makeDraggable(document.getElementById('tileSelector'), document.getElementById('tileSelector'));
 
         // Initial Boot
         renderDistrictsPolygons();
