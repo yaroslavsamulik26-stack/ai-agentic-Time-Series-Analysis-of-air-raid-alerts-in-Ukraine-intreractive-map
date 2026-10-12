@@ -295,7 +295,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             position: absolute;
             bottom: 16px;
             left: 12px;
-            z-index: 1000;
+            z-index: 1100;
             background: var(--panel-bg);
             backdrop-filter: blur(10px);
             border: 1px solid var(--border-color);
@@ -313,6 +313,34 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }
 
         .reopen-legend-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: #ffffff;
+            border-color: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .reopen-tile-btn {
+            position: absolute;
+            bottom: 16px;
+            right: 12px;
+            z-index: 1100;
+            background: var(--panel-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-color);
+            color: #cbd5e1;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+            transition: all 0.2s ease;
+        }
+
+        .reopen-tile-btn:hover {
             background: rgba(255, 255, 255, 0.15);
             color: #ffffff;
             border-color: rgba(255, 255, 255, 0.3);
@@ -698,6 +726,33 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             color: #ffffff;
         }
 
+        .tile-close-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 15px;
+            line-height: 1;
+            padding: 0 4px;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .tile-close-btn:hover {
+            color: #ffffff;
+        }
+
+        /* Draggable touch-action optimizations */
+        .panel-drag-header,
+        .top-navbar,
+        .tile-selector {
+            touch-action: none;
+        }
+
+        /* Leaflet bottom-right control positioning so it does not collide with tile selector */
+        .leaflet-bottom.leaflet-right .leaflet-control-zoom {
+            margin-bottom: 54px;
+        }
+
         /* Custom Popup Styling */
         .leaflet-popup-content-wrapper {
             background: #1e293b !important;
@@ -917,8 +972,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 max-height: 40vh;
             }
             .reopen-panel-btn {
-                top: auto;
-                bottom: 8px;
+                top: 50px;
+                bottom: auto;
                 right: 8px;
             }
             .reopen-nav-btn {
@@ -928,6 +983,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             .reopen-legend-btn {
                 bottom: 8px;
                 left: 8px;
+            }
+            .reopen-tile-btn {
+                bottom: 8px;
+                right: 8px;
+            }
+            .leaflet-bottom.leaflet-right .leaflet-control-zoom {
+                margin-bottom: 46px;
             }
             .leaflet-popup-content {
                 max-width: 260px !important;
@@ -1032,7 +1094,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <!-- Top Navigation Bar - Draggable & Compact -->
     <div class="top-navbar" id="topNavbar">
         <div class="title-block">
-            <i class="fa-solid fa-grip-lines" style="color:var(--text-muted); cursor:move; font-size:11px;" title="Перетягнути панель"></i>
+            <i class="fa-solid fa-grip-lines" style="color:var(--text-muted); cursor:move; font-size:11px;" title="Перетягнути панель (двічі клікніть для скидання)"></i>
             <div class="title-badge">Defense OSINT</div>
             <div class="title-text">
                 <h1>Kyiv Defense Map</h1>
@@ -1040,7 +1102,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         </div>
 
         <!-- Threat Mode Switcher -->
-        <div class="threat-modes">
+        <div class="threat-modes no-drag">
             <button class="mode-btn active" data-mode="all" onclick="setThreatMode('all')">
                 <i class="fa-solid fa-layer-group"></i> Всі загрози
             </button>
@@ -1053,7 +1115,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         </div>
 
         <!-- Forecast Horizon Selector -->
-        <div class="time-range-modes" title="Горизонт оцінки привабливості цілей (A_i)" data-metric="A_i (P_Target)">
+        <div class="time-range-modes no-drag" title="Горизонт оцінки привабливості цілей (A_i)" data-metric="A_i (P_Target)">
             <button class="time-btn" data-range="24h" onclick="setTimeRange('24h')" title="Тактичний добовий горизонт (24 години)">
                 <i class="fa-solid fa-clock"></i> 24 год
             </button>
@@ -1084,7 +1146,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         <button class="btn-panel-close top-navbar-close-btn" onclick="closeTopNavbar()" title="Згорнути панель навігації">&times;</button>
 
         <!-- Top Category Filters Row -->
-        <div class="top-cat-filters" id="topCategoryFilters">
+        <div class="top-cat-filters no-drag" id="topCategoryFilters">
             <button class="filter-action-btn" onclick="setAllCategories(true)" title="Увімкнути всі категорії">Всі</button>
             <button class="filter-action-btn" onclick="setAllCategories(false)" title="Скинути всі категорії">Скинути</button>
             <div class="filter-chip active" data-cat="bridges" onclick="toggleCategoryFilter('bridges')" title="Фільтр: Мости через Дніпро та розв'язки">
@@ -1258,11 +1320,17 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         </div>
     </div>
 
+    <!-- Reopen Floating Tile Selector Button (when tile selector is closed) -->
+    <button id="openTileSelectorBtn" class="reopen-tile-btn" onclick="openTileSelector()" title="Відкрити перемикач шару мапи">
+        <i class="fa-solid fa-layer-group"></i> Мапа
+    </button>
+
     <!-- Tile Layer Switcher: Google Roadmap & Google Satellite ONLY - Floating & Draggable -->
     <div class="tile-selector" id="tileSelector">
-        <i class="fa-solid fa-grip-lines-vertical" style="color:var(--text-muted); font-size:10px; margin: 0 3px; cursor:move;" title="Перетягнути перемикач мапи"></i>
+        <i class="fa-solid fa-grip-lines-vertical" style="color:var(--text-muted); font-size:10px; margin: 0 3px; cursor:move;" title="Перетягнути перемикач мапи (двічі клікніть для скидання)"></i>
         <button class="tile-btn active" data-tile="gmaps_road" onclick="setBaseTile('gmaps_road')">Google Maps</button>
         <button class="tile-btn" data-tile="gmaps_sat" onclick="setBaseTile('gmaps_sat')">Супутник</button>
+        <button class="btn-panel-close tile-close-btn" onclick="closeTileSelector()" title="Згорнути вибір мапи">&times;</button>
     </div>
 
     <!-- Reopen Floating Legend Button (when legend is closed) -->
@@ -2277,6 +2345,38 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             bringToFront(leg);
         }
 
+        // Tile Layer Switcher Panel
+        function toggleTileSelector() {
+            const tile = document.getElementById('tileSelector');
+            if (tile.style.display === 'none') {
+                openTileSelector();
+            } else {
+                closeTileSelector();
+            }
+        }
+
+        function closeTileSelector() {
+            document.getElementById('tileSelector').style.display = 'none';
+            document.getElementById('openTileSelectorBtn').style.display = 'flex';
+        }
+
+        function openTileSelector() {
+            const tile = document.getElementById('tileSelector');
+            tile.style.display = 'flex';
+            document.getElementById('openTileSelectorBtn').style.display = 'none';
+            bringToFront(tile);
+        }
+
+        // Reset panel to default stylesheet positioning
+        function resetPanelPosition(panelId) {
+            const el = document.getElementById(panelId);
+            if (!el) return;
+            el.style.top = '';
+            el.style.left = '';
+            el.style.right = '';
+            el.style.bottom = '';
+        }
+
         function setAllCategories(enableAll) {
             const allCats = ['bridges', 'metro', 'energy', 'fuel', 'water', 'industry', 'civilian_hub', 'admin', 'transport', 'defense'];
             if (enableAll) {
@@ -2570,7 +2670,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             });
         }
 
-        // Generic Draggable Helper with Viewport Clamping & Touch Support
+        // Generic Draggable Helper with Viewport Clamping, Touch Support & Reset
         function shouldIgnoreDrag(target) {
             if (!target) return false;
             const tag = target.tagName ? target.tagName.toUpperCase() : '';
@@ -2585,7 +2685,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 target.closest('a') || 
                 target.closest('.filter-chip') || 
                 target.closest('.btn-panel-close') ||
-                target.closest('.no-drag')
+                target.closest('.tile-close-btn') ||
+                target.closest('.no-drag') ||
+                target.closest('.top-cat-filters') ||
+                target.closest('.threat-modes') ||
+                target.closest('.time-range-modes')
             )) {
                 return true;
             }
@@ -2610,6 +2714,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             if (handle.addEventListener) {
                 handle.addEventListener('mousedown', dragStart);
                 handle.addEventListener('touchstart', dragStart, { passive: false });
+                handle.addEventListener('dblclick', function(e) {
+                    if (shouldIgnoreDrag(e.target)) return;
+                    resetPanelPosition(element.id);
+                });
             } else {
                 handle.onmousedown = dragStart;
             }
@@ -2631,6 +2739,14 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 pos3 = coords.clientX;
                 pos4 = coords.clientY;
 
+                if (e.cancelable && e.preventDefault) {
+                    e.preventDefault();
+                }
+
+                if (typeof window !== 'undefined' && window.addEventListener) {
+                    window.addEventListener('blur', dragEnd);
+                }
+
                 if (e.type === 'touchstart') {
                     if (document.addEventListener) {
                         document.addEventListener('touchend', dragEnd);
@@ -2638,7 +2754,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                         document.addEventListener('touchmove', elementDrag, { passive: false });
                     }
                 } else {
-                    if (e.preventDefault) e.preventDefault();
                     if (document.addEventListener) {
                         document.addEventListener('mouseup', dragEnd);
                         document.addEventListener('mousemove', elementDrag);
@@ -2670,11 +2785,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 const elW = element.offsetWidth || 0;
                 const elH = element.offsetHeight || 0;
 
-                const maxLeft = Math.max(0, winW - elW);
-                const maxTop = Math.max(0, winH - Math.min(elH, 60));
+                const minLeft = elW > winW ? (winW - elW) : 0;
+                const maxLeft = elW > winW ? 0 : Math.max(0, winW - elW);
+                const minTop = elH > winH ? (winH - elH) : 0;
+                const maxTop = elH > winH ? 0 : Math.max(0, winH - elH);
 
-                newLeft = Math.max(0, Math.min(newLeft, maxLeft));
-                newTop = Math.max(0, Math.min(newTop, maxTop));
+                newLeft = Math.max(minLeft, Math.min(newLeft, maxLeft));
+                newTop = Math.max(minTop, Math.min(newTop, maxTop));
 
                 element.style.top = newTop + "px";
                 element.style.left = newLeft + "px";
@@ -2685,6 +2802,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             function dragEnd() {
                 if (typeof map !== 'undefined' && map && map.dragging && map.dragging.enable) {
                     map.dragging.enable();
+                }
+
+                if (typeof window !== 'undefined' && window.removeEventListener) {
+                    window.removeEventListener('blur', dragEnd);
                 }
 
                 if (document.removeEventListener) {
@@ -2715,16 +2836,29 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             ];
 
             panels.forEach(function(el) {
-                if (!el || el.style.display === 'none') return;
+                if (!el) return;
+                // On mobile screens (<= 768px), reset inline coords so responsive mobile stylesheet applies cleanly
+                if (winW <= 768) {
+                    el.style.top = '';
+                    el.style.left = '';
+                    el.style.right = '';
+                    el.style.bottom = '';
+                    return;
+                }
+                if (el.style.display === 'none') return;
                 if (el.style.top && el.style.left) {
                     const elW = el.offsetWidth || 0;
                     const elH = el.offsetHeight || 0;
                     let curLeft = el.offsetLeft;
                     let curTop = el.offsetTop;
-                    const maxL = Math.max(0, winW - elW);
-                    const maxT = Math.max(0, winH - Math.min(elH, 60));
-                    if (curLeft > maxL) el.style.left = Math.max(0, maxL) + 'px';
-                    if (curTop > maxT) el.style.top = Math.max(0, maxT) + 'px';
+                    const minL = elW > winW ? (winW - elW) : 0;
+                    const maxL = elW > winW ? 0 : Math.max(0, winW - elW);
+                    const minT = elH > winH ? (winH - elH) : 0;
+                    const maxT = elH > winH ? 0 : Math.max(0, winH - elH);
+                    if (curLeft > maxL) el.style.left = maxL + 'px';
+                    if (curLeft < minL) el.style.left = minL + 'px';
+                    if (curTop > maxT) el.style.top = maxT + 'px';
+                    if (curTop < minT) el.style.top = minT + 'px';
                 }
             });
         }

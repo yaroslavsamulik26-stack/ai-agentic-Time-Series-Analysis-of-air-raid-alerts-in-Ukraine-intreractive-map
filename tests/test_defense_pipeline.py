@@ -514,8 +514,11 @@ class TestKyivDefensePipeline(unittest.TestCase):
         self.assertIn('id="panelDragHeader"', content)
         self.assertIn('closeSidePanel()', content)
         self.assertIn('id="openSidePanelBtn"', content)
-        self.assertIn('openSidePanel()', content)
         self.assertIn('id="tileSelector"', content)
+        self.assertIn('closeTileSelector()', content)
+        self.assertIn('id="openTileSelectorBtn"', content)
+        self.assertIn('openTileSelector()', content)
+        self.assertIn('resetPanelPosition', content)
         self.assertIn('makeDraggable', content)
 
         # District Popup Factor Breakdown
@@ -676,6 +679,13 @@ toggleSidePanel();
 closeLegend();
 openLegend();
 toggleLegend();
+closeTileSelector();
+openTileSelector();
+toggleTileSelector();
+resetPanelPosition("topNavbar");
+resetPanelPosition("sidePanel");
+resetPanelPosition("mapLegend");
+resetPanelPosition("tileSelector");
 if (typeof getDistrictColor !== "function") throw new Error("getDistrictColor missing");
 if (getDistrictColor(75) !== "#dc2626") throw new Error("District 75 should be #dc2626");
 if (getDistrictColor(65) !== "#ea580c") throw new Error("District 65 should be #ea580c");
