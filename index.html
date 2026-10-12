@@ -1104,6 +1104,13 @@
                 </div>
             </div>
         </div>
+        <!-- Analytical Disclaimer Footer in Side Panel -->
+        <div class="panel-disclaimer-footer" style="padding: 7px 10px; background: rgba(0, 0, 0, 0.45); border-top: 1px solid var(--border-color); font-size: 9.5px; line-height: 1.35; color: #cbd5e1; display: flex; align-items: flex-start; gap: 6px;">
+            <i class="fa-solid fa-triangle-exclamation" style="color: #eab308; margin-top: 2px; font-size: 10px;"></i>
+            <div>
+                <b style="color: #eab308;">Аналітична ремарка:</b> Дані сформовано за розрахунковими формулами на основі минулих спостережень. Через умови воєнного стану не всі відомості можуть бути абсолютно точними. Під час тривоги перебувайте в укриттях та орієнтуйтеся лише на офіційні канали ПС ЗСУ.
+            </div>
+        </div>
     </div>
 
     <!-- Tile Layer Switcher: Google Roadmap & Google Satellite ONLY -->
@@ -1130,6 +1137,9 @@
             <div class="legend-item"><i class="fa-solid fa-crosshairs" style="color:#ef4444; font-size:10px;"></i> Пріоритетні цілі (Індекс небезпеки A<sub>i</sub>)</div>
             <div class="legend-item"><i class="fa-solid fa-shield-halved" style="color:#10b981; font-size:10px;"></i> Ешелон ППО & турелі</div>
             <div class="legend-item"><i class="fa-solid fa-route" style="color:#38bdf8; font-size:10px;"></i> Вектор підльоту загроз</div>
+        </div>
+        <div style="margin-top:5px; border-top:1px solid rgba(255,255,255,0.08); padding-top:4px; font-size:8.5px; color:#94a3b8; line-height:1.25;">
+            <i class="fa-solid fa-circle-info" style="color:#eab308;"></i> <b>Ремарка:</b> Аналітика на основі минулих спостережень. Орієнтуйтеся на офіційні канали ПС ЗСУ.
         </div>
     </div>
 
@@ -1249,6 +1259,14 @@
                     </p>
                 </div>
                 <button class="btn-close" onclick="closeAnalyticsModal()">&times;</button>
+            </div>
+
+            <!-- Analytical Methodology Disclaimer -->
+            <div style="background:rgba(234, 179, 8, 0.08); border:1px solid rgba(234, 179, 8, 0.25); border-radius:8px; padding:9px 12px; margin-bottom:14px; font-size:11px; line-height:1.4; color:#fde047; display:flex; align-items:flex-start; gap:8px;">
+                <i class="fa-solid fa-triangle-exclamation" style="margin-top:2px; font-size:12px; color:#eab308;"></i>
+                <div>
+                    <b>Аналітична ремарка:</b> Наведені показники, розрахункові індекси небезпеки та ймовірнісні оцінки створені за математичними моделями та формулами на основі спостережень минулих періодів (квітень — жовтень 2026 р.). Через умови воєнного стану та вимоги оперативної безпеки (OPSEC) не всі дані можуть бути вичерпно точними. Інформація має виключно дослідницький характер. Під час тривоги обов’язково перебувайте в укриттях та орієнтуйтеся на офіційні повідомлення Повітряних Сил ЗСУ.
+                </div>
             </div>
 
             <div class="metrics-grid" style="grid-template-columns: repeat(3, 1fr);">
