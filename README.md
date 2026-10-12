@@ -5,7 +5,13 @@
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)
 ![Evaluation](https://img.shields.io/badge/Evaluation-Zero%20Data%20Leakage-success.svg)
 ![Map](https://img.shields.io/badge/Map-Leaflet%20%7C%20Google%20Maps%20Tiles-orange.svg)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-brightgreen)](https://yaroslavsamulik26-stack.github.io/ai-agentic-Time-Series-Analysis-of-air-raid-alerts-in-Ukraine-intreractive-map/)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
+
+---
+
+## 🌐 Live Interactive Demo
+🔗 **[Відкрити інтерактивну карту онлайн (GitHub Pages Live Demo)](https://yaroslavsamulik26-stack.github.io/ai-agentic-Time-Series-Analysis-of-air-raid-alerts-in-Ukraine-intreractive-map/)**
 
 ---
 
