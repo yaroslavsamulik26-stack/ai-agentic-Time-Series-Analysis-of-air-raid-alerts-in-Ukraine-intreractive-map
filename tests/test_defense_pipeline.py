@@ -2,7 +2,6 @@ import unittest
 import json
 from pathlib import Path
 import pandas as pd
-import numpy as np
 
 # Path setup
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -102,7 +101,7 @@ class TestKyivDefensePipeline(unittest.TestCase):
 
     def test_processed_incidents_dataset(self):
         """Verify processed incidents CSV schema, non-emptiness, and coordinates."""
-        self.assertTrue(cls_file_exists := self.incidents_path.exists(), "incidents_unified.csv does not exist")
+        self.assertTrue(self.incidents_path.exists(), "incidents_unified.csv does not exist")
         df = pd.read_csv(self.incidents_path)
         self.assertGreaterEqual(len(df), 700, "Dataset should have at least 700 verified incidents")
 

@@ -569,6 +569,7 @@ class KyivRiskEngine:
 
         incidents_summary = {
             "total": len(self.incidents_df),
+            "by_district": incidents_by_district,
             "by_level": self.incidents_df["alert_level"].value_counts().to_dict()
             if not self.incidents_df.empty and "alert_level" in self.incidents_df.columns
             else {},

@@ -52,7 +52,7 @@ def main():
     print(f"      Test holdout period: {ts_eval['test_period']}")
     print(f"      Test Set ROC-AUC: {ts_eval['metrics']['model_roc_auc']} (Baseline: {ts_eval['metrics']['baseline_roc_auc']})")
     print(f"      Test Set Brier Score: {ts_eval['metrics']['model_brier_score']}")
-    print(f"      Leak-Free Verification: PASSED (Zero look-ahead features)")
+    print("      Leak-Free Verification: PASSED (Zero look-ahead features)")
 
     # 3. Geospatial Risk Scoring
     print("\n[3/4] Computing Geospatial Risk Scores for Kyiv Infrastructure & Districts...")
