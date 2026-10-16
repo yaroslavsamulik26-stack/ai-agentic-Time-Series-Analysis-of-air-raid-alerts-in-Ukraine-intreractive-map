@@ -381,6 +381,10 @@ class KyivDataIngestionPipeline:
 
         # 2. Check for raw Telegram files recursively
         tg_files = list(self.raw_tg_dir.glob("**/*.json"))
+        if not tg_files:
+            desktop_export_dir = Path.home() / "Desktop" / "Exports air attack"
+            if desktop_export_dir.exists():
+                tg_files = list(desktop_export_dir.glob("**/*.json"))
         tg_events = []
         all_notebooklm_lines = []
 
