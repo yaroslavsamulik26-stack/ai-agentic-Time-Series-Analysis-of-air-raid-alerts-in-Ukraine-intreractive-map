@@ -15,6 +15,7 @@ import json
 import sys
 from pathlib import Path
 from jinja2 import Template
+import pandas as pd
 
 # Add project root to sys.path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -1139,6 +1140,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             <i class="fa-solid fa-chart-line"></i> Time Series
         </button>
 
+        <button class="btn-action-small" onclick="switchPanelTab('tab-alerts'); openSidePanel();" style="background:rgba(239, 68, 68, 0.2); border-color:#ef4444; color:#fca5a5;" title="Хроніка та статистика 169 повітряних тривог Києва">
+            <i class="fa-solid fa-bell"></i> 169 тривог
+        </button>
+
         <button class="btn-action-small active" id="toggleSidePanelBtn" onclick="toggleSidePanel()" title="Відкрити/закрити аналітичну панель оцінки небезпеки">
             <i class="fa-solid fa-chart-pie"></i> Панель небезпеки
         </button>
@@ -1198,6 +1203,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
         <div class="panel-tabs">
             <div class="panel-tab active" onclick="switchPanelTab('tab-districts')">Райони (Рівень небезпеки)</div>
+            <div class="panel-tab" onclick="switchPanelTab('tab-alerts')"><i class="fa-solid fa-bell"></i> Хроніка тривог (Time Series)</div>
             <div class="panel-tab" onclick="switchPanelTab('tab-objects')">Об'єкти & ППО</div>
             <div class="panel-tab" onclick="switchPanelTab('tab-priority-targets')">Пріоритетні цілі & Привабливість для ворога</div>
             <div class="panel-tab" onclick="switchPanelTab('tab-notebooklm')">OSINT Зведення</div>
@@ -1214,6 +1220,34 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     <div id="districts-list">
                         <!-- Rendered by JS -->
                     </div>
+                </div>
+            </div>
+
+            <!-- Tab: Alert Chronology & Time Series Analytics -->
+            <div id="tab-alerts" class="tab-pane">
+                <div class="filter-section">
+                    <div class="section-title"><i class="fa-solid fa-bell"></i> Хроніка та аналітика тривог Києва</div>
+                    <p style="font-size:10px; color:var(--text-muted); margin-bottom:8px;">
+                        Офіційні дані за 6 місяців (11 квітня — 11 жовтня 2026 р., alerts.in.ua). Добовий розподіл та стрічка нальотів.
+                    </p>
+                    <div id="alerts-stats-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:6px; margin-bottom:10px;">
+                    </div>
+                    <div style="background:rgba(0,0,0,0.3); border:1px solid var(--border-color); border-radius:6px; padding:8px; margin-bottom:10px;">
+                        <div style="font-size:10.5px; font-weight:700; color:#38bdf8; margin-bottom:4px; display:flex; justify-content:space-between;">
+                            <span><i class="fa-solid fa-chart-column"></i> Добовий розподіл тривог:</span>
+                            <span style="font-size:9.5px; color:#94a3b8;">(години 00:00 - 23:00)</span>
+                        </div>
+                        <div id="hourly-alert-bars" style="display:flex; align-items:flex-end; gap:2px; height:50px; padding-top:4px;"></div>
+                        <div style="display:flex; justify-content:space-between; font-size:8px; color:var(--text-muted); margin-top:3px;">
+                            <span>00:00 (Ніч)</span>
+                            <span>06:00 (Ранок)</span>
+                            <span>12:00 (День)</span>
+                            <span>18:00 (Вечір)</span>
+                            <span>23:00</span>
+                        </div>
+                    </div>
+                    <div class="section-title"><i class="fa-solid fa-list-ul"></i> Стрічка останніх тривог Києва:</div>
+                    <div id="alerts-feed-container" style="display:flex; flex-direction:column; gap:6px; max-height:260px; overflow-y:auto; padding-right:4px;"></div>
                 </div>
             </div>
 
@@ -1592,6 +1626,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         const INCIDENTS_DATA = {{ incidents_json }};
         const DISTRICTS_GEOJSON = {{ districts_geojson_json }};
         const NOTEBOOKLM_DIGEST = {{ notebooklm_digest_json }};
+        const ALERTS_DATA = {{ alerts_json }};
 
         // State
         let currentThreatMode = 'all'; // 'all', 'yellow', 'orange', 'red'
@@ -2873,6 +2908,91 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         makeDraggable(document.getElementById('mapLegend'), document.getElementById('legendDragHeader'));
         makeDraggable(document.getElementById('tileSelector'), document.getElementById('tileSelector'));
 
+        function renderAlertsFeed() {
+            // 1. Quick Stats Grid
+            const statsContainer = document.getElementById("alerts-stats-grid");
+            if (statsContainer && typeof TS_STATS !== "undefined") {
+                const total = TS_STATS.total_alerts || 169;
+                const avgDur = TS_STATS.avg_duration_minutes || 157.1;
+                const avgGap = TS_STATS.avg_interval_hours || 27.4;
+                const shahedCount = (TS_STATS.threat_breakdown && TS_STATS.threat_breakdown.drone_shahed) ? TS_STATS.threat_breakdown.drone_shahed : 92;
+                statsContainer.innerHTML = `
+                    <div style="background:rgba(255,255,255,0.04); border:1px solid var(--border-color); border-radius:6px; padding:6px 8px;">
+                        <div style="font-size:9px; color:var(--text-muted); text-transform:uppercase;">Всього тривог</div>
+                        <div style="font-size:16px; font-weight:800; color:#38bdf8;">${total}</div>
+                        <div style="font-size:8.5px; color:#94a3b8;">11 квіт — 11 жовт 2026</div>
+                    </div>
+                    <div style="background:rgba(255,255,255,0.04); border:1px solid var(--border-color); border-radius:6px; padding:6px 8px;">
+                        <div style="font-size:9px; color:var(--text-muted); text-transform:uppercase;">Сер. тривалість</div>
+                        <div style="font-size:16px; font-weight:800; color:#eab308;">${avgDur} хв</div>
+                        <div style="font-size:8.5px; color:#94a3b8;">~2.6 год на наліт</div>
+                    </div>
+                    <div style="background:rgba(255,255,255,0.04); border:1px solid var(--border-color); border-radius:6px; padding:6px 8px;">
+                        <div style="font-size:9px; color:var(--text-muted); text-transform:uppercase;">Тактична пауза</div>
+                        <div style="font-size:16px; font-weight:800; color:#10b981;">${avgGap} год</div>
+                        <div style="font-size:8.5px; color:#94a3b8;">сер. інтервал спокою</div>
+                    </div>
+                    <div style="background:rgba(255,255,255,0.04); border:1px solid var(--border-color); border-radius:6px; padding:6px 8px;">
+                        <div style="font-size:9px; color:var(--text-muted); text-transform:uppercase;">БпЛА Shahed</div>
+                        <div style="font-size:16px; font-weight:800; color:#f97316;">${shahedCount}</div>
+                        <div style="font-size:8.5px; color:#94a3b8;">54.4% усіх загроз</div>
+                    </div>
+                `;
+            }
+
+            // 2. 24h Hourly Bars Chart
+            const barsContainer = document.getElementById("hourly-alert-bars");
+            if (barsContainer && typeof TS_STATS !== "undefined" && TS_STATS.hourly_onset_distribution) {
+                const arr = TS_STATS.hourly_onset_distribution;
+                const maxVal = Math.max(...arr, 1);
+                barsContainer.innerHTML = "";
+                arr.forEach((cnt, h) => {
+                    const pct = Math.round((cnt / maxVal) * 100);
+                    const isPeak = (h >= 1 && h <= 4) || (h >= 6 && h <= 7);
+                    const col = isPeak ? "#f97316" : (cnt > 5 ? "#38bdf8" : "#64748b");
+                    const bar = document.createElement("div");
+                    bar.style.flex = "1";
+                    bar.style.height = `${Math.max(12, pct)}%`;
+                    bar.style.background = col;
+                    bar.style.borderRadius = "2px 2px 0 0";
+                    bar.style.cursor = "pointer";
+                    bar.title = `${h}:00 - ${h}:59: ${cnt} тривог ${isPeak ? "(Пікова фаза)" : ""}`;
+                    barsContainer.appendChild(bar);
+                });
+            }
+
+            // 3. Alerts Feed List
+            const feedContainer = document.getElementById("alerts-feed-container");
+            if (feedContainer && typeof ALERTS_DATA !== "undefined" && Array.isArray(ALERTS_DATA)) {
+                feedContainer.innerHTML = "";
+                const threatNames = {
+                    "drone_shahed": "Ударний БпЛА (Shahed)",
+                    "missile_mig31": "МіГ-31К (Кинджал)",
+                    "missile_strategic": "Стратегічна авіація (Ту-95/160)",
+                    "missile_ballistic": "Балістична ракета"
+                };
+                ALERTS_DATA.slice(0, 40).forEach(al => {
+                    const isRed = al.alert_level === "red";
+                    const badgeCol = isRed ? "#ef4444" : "#eab308";
+                    const badgeBg = isRed ? "rgba(239,68,68,0.15)" : "rgba(234,179,8,0.15)";
+                    const thName = threatNames[al.threat_type] || al.threat_type;
+                    const card = document.createElement("div");
+                    card.style.cssText = "background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:6px; padding:6px 8px; font-size:10px; display:flex; flex-direction:column; gap:2px;";
+                    card.innerHTML = `
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-weight:700; color:#e2e8f0;"><i class="fa-solid fa-clock"></i> ${al.started_at}</span>
+                            <span style="font-size:9px; font-weight:700; color:${badgeCol}; background:${badgeBg}; padding:1px 5px; border-radius:4px; border:1px solid ${badgeCol}40;">${thName}</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; color:var(--text-muted); font-size:9px; margin-top:1px;">
+                            <span>Відбій: ${al.finished_at || "—"}</span>
+                            <span style="color:#38bdf8; font-weight:600;"><i class="fa-solid fa-stopwatch"></i> ${al.duration_minutes} хв (~${(al.duration_minutes/60).toFixed(1)} год)</span>
+                        </div>
+                    `;
+                    feedContainer.appendChild(card);
+                });
+            }
+        }
+
         // Initial Boot
         renderDistrictsPolygons();
         renderCorridors();
@@ -2880,6 +3000,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         renderDistrictsList();
         renderObjectsList();
         renderPriorityTargetsList();
+        renderAlertsFeed();
     </script>
 </body>
 </html>
@@ -2895,6 +3016,16 @@ def build_dashboard():
     ts_analyzer = KyivAlertTimeSeriesAnalyzer()
     ts_stats = ts_analyzer.compute_descriptive_stats()
     ts_eval = ts_analyzer.run_temporal_evaluation()
+
+    alerts_df = ts_analyzer.raw_df
+    alerts_list = []
+    if not alerts_df.empty:
+        alerts_copy = alerts_df.copy()
+        if pd.api.types.is_datetime64_any_dtype(alerts_copy["started_at"]):
+            alerts_copy["started_at"] = alerts_copy["started_at"].dt.strftime("%Y-%m-%d %H:%M")
+        if pd.api.types.is_datetime64_any_dtype(alerts_copy["finished_at"]):
+            alerts_copy["finished_at"] = alerts_copy["finished_at"].dt.strftime("%Y-%m-%d %H:%M")
+        alerts_list = alerts_copy.sort_values("started_at", ascending=False).to_dict(orient="records")
 
     # 3. Load incidents
     incidents_df = risk_engine.incidents_df
@@ -2930,6 +3061,7 @@ def build_dashboard():
         ts_stats_json=json.dumps(ts_stats, ensure_ascii=False),
         ts_eval_json=json.dumps(ts_eval, ensure_ascii=False),
         incidents_json=json.dumps(incidents_list, ensure_ascii=False),
+        alerts_json=json.dumps(alerts_list, ensure_ascii=False),
         districts_geojson_json=json.dumps(districts_geojson, ensure_ascii=False),
         notebooklm_digest_json=json.dumps(nblm_text, ensure_ascii=False),
     )
